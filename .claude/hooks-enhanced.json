@@ -1,0 +1,205 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "description": "Log all bash commands for audit trail",
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] Bash: $(jq -r '.tool_input.command' 2>/dev/null || echo 'unknown')\" >> .claude/logs/bash-commands.log"
+          }
+        ]
+      },
+      {
+        "description": "Validate file edits for security",
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import json, sys, re; data=json.load(sys.stdin); path=data.get('tool_input',{}).get('file_path',''); content=data.get('tool_input',{}).get('new_string','') or data.get('tool_input',{}).get('content',''); patterns=['api[_-]?key','password','secret','token','BEGIN RSA PRIVATE KEY']; sys.exit(2 if any(re.search(p, content, re.I) for p in patterns) else 0)\"",
+            "blocking": true,
+            "error_message": "Security violation: Potential secret detected in file content"
+          }
+        ]
+      },
+      {
+        "description": "Block edits to critical files",
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read path; if echo \"$path\" | grep -qE '(\\.env$|package-lock\\.json|\\.git/|node_modules/|dist/|build/)'; then exit 2; fi; }",
+            "blocking": true,
+            "error_message": "Protected file: Cannot modify this file directly"
+          }
+        ]
+      },
+      {
+        "description": "Validate test execution",
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' | { read cmd; if echo \"$cmd\" | grep -qE '^(npm|yarn|pnpm) (run )?test'; then echo '[Test Execution] Running tests...' >&2; fi; }"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "description": "Auto-format TypeScript/JavaScript files",
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read path; if echo \"$path\" | grep -qE '\\.(ts|tsx|js|jsx)$' && command -v prettier >/dev/null 2>&1; then prettier --write \"$path\" 2>/dev/null && echo \"[Format] Formatted $path with Prettier\" >&2; fi; }"
+          }
+        ]
+      },
+      {
+        "description": "Auto-format Python files",
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read path; if echo \"$path\" | grep -q '\\.py$' && command -v black >/dev/null 2>&1; then black \"$path\" 2>/dev/null && echo \"[Format] Formatted $path with Black\" >&2; fi; }"
+          }
+        ]
+      },
+      {
+        "description": "Auto-format Go files",
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read path; if echo \"$path\" | grep -q '\\.go$' && command -v gofmt >/dev/null 2>&1; then gofmt -w \"$path\" 2>/dev/null && echo \"[Format] Formatted $path with gofmt\" >&2; fi; }"
+          }
+        ]
+      },
+      {
+        "description": "Run linting after file changes",
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read path; ext=${path##*.}; if [ \"$ext\" = \"js\" ] || [ \"$ext\" = \"ts\" ]; then if command -v eslint >/dev/null 2>&1; then eslint \"$path\" --fix 2>/dev/null; fi; fi; }"
+          }
+        ]
+      },
+      {
+        "description": "Check test coverage after test runs",
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' | { read cmd; if echo \"$cmd\" | grep -qE 'test.*--coverage|jest.*--coverage|pytest.*--cov'; then echo '[Coverage] Test coverage report generated' >&2; fi; }"
+          }
+        ]
+      },
+      {
+        "description": "Log file modifications",
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"[$(date '+%Y-%m-%d %H:%M:%S')] Modified: $(jq -r '.tool_input.file_path' 2>/dev/null)\" >> .claude/logs/file-modifications.log"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "description": "Custom notification for important events",
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"[Claude Code] $(jq -r '.message' 2>/dev/null || echo 'Notification')\" >&2"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "description": "Summary after Claude completes",
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[Session] Claude Code task completed. Check logs for details.' >&2"
+          }
+        ]
+      },
+      {
+        "description": "Run final checks",
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f package.json ]; then echo '[Check] Running final validation...'; npm run lint 2>/dev/null || true; fi"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "description": "Log subagent completion",
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"[Subagent] $(jq -r '.subagent_name' 2>/dev/null || echo 'Unknown') completed task\" >> .claude/logs/subagent-activity.log"
+          }
+        ]
+      }
+    ]
+  },
+  "custom_hooks": {
+    "pre_commit": {
+      "description": "Hooks that run before git commits",
+      "commands": [
+        "echo '[Pre-commit] Running security scan...'",
+        "grep -r 'api[_-]key\\|password\\|secret' --include='*.js' --include='*.ts' --include='*.py' . 2>/dev/null | grep -v node_modules | grep -v '.git' || true",
+        "echo '[Pre-commit] Running tests...'",
+        "npm test 2>/dev/null || yarn test 2>/dev/null || pytest 2>/dev/null || true",
+        "echo '[Pre-commit] Checking formatting...'",
+        "prettier --check . 2>/dev/null || true"
+      ]
+    },
+    "post_feature": {
+      "description": "Hooks that run after feature implementation",
+      "commands": [
+        "echo '[Post-feature] Triggering code review subagent...'",
+        "echo '[Post-feature] Generating documentation...'",
+        "echo '[Post-feature] Running test coverage...'"
+      ]
+    }
+  },
+  "hook_configuration": {
+    "enabled": true,
+    "log_directory": ".claude/logs",
+    "blocking_timeout_ms": 5000,
+    "continue_on_error": true,
+    "security": {
+      "block_sensitive_patterns": true,
+      "audit_all_commands": true,
+      "protect_critical_files": true
+    },
+    "formatting": {
+      "auto_format_on_save": true,
+      "languages": {
+        "javascript": "prettier",
+        "typescript": "prettier",
+        "python": "black",
+        "go": "gofmt",
+        "rust": "rustfmt"
+      }
+    },
+    "quality": {
+      "lint_on_save": true,
+      "test_on_commit": true,
+      "coverage_threshold": 80
+    }
+  }
+}

@@ -1,0 +1,52 @@
+name: Claude Fix Failing Tests
+
+permissions:
+  contents: write
+  pull-requests: write
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main, develop]
+
+jobs:
+  fix-tests:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+      
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+        continue-on-error: true
+      
+      - name: Claude Fix Tests
+        uses: anthropics/claude-code-action@main
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            The CI tests are failing. Please:
+            1. Analyze the test failure logs
+            2. Identify the root cause
+            3. Fix the failing tests
+            4. Ensure all tests pass
+            5. Create a PR with the fixes
+            
+            Branch: ${{ github.event.workflow_run.head_branch }}
+            Commit: ${{ github.event.workflow_run.head_sha }}
+            
+            Do not modify test expectations unless the implementation is correct.
+            Focus on fixing actual bugs, not just making tests pass.
+          max_turns: 30
+          timeout_minutes: 25

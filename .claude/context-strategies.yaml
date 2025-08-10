@@ -1,0 +1,305 @@
+# Claude Code Context Management Strategies
+# Based on official documentation best practices
+
+context_optimization:
+  # Maximum context window management
+  window_management:
+    total_tokens: 200000
+    allocation:
+      user_input: 10%        # 20k tokens
+      working_memory: 40%    # 80k tokens
+      reference_data: 25%    # 50k tokens
+      agent_context: 15%     # 30k tokens
+      buffer: 10%           # 20k tokens
+
+  # Smart context switching
+  context_switching:
+    save_state_on:
+      - task_completion
+      - context_overflow
+      - user_request
+      - major_milestone
+    
+    restore_priority:
+      1: current_task
+      2: todo_list
+      3: recent_errors
+      4: active_files
+      5: test_results
+
+  # Incremental loading strategy
+  incremental_loading:
+    initial_load:
+      - CLAUDE.md
+      - package.json
+      - current_file
+      - immediate_dependencies
+    
+    on_demand_load:
+      - related_files
+      - test_files
+      - documentation
+      - error_logs
+    
+    lazy_load:
+      - historical_data
+      - large_files
+      - binary_assets
+      - external_resources
+
+# Context preservation rules
+preservation_rules:
+  always_keep:
+    - active_task_definition
+    - current_todo_list
+    - user_instructions
+    - critical_errors
+    - security_warnings
+  
+  keep_until_resolved:
+    - error_context
+    - failing_tests
+    - merge_conflicts
+    - build_failures
+  
+  keep_for_duration:
+    search_results: 5_minutes
+    file_contents: 10_minutes
+    test_output: 15_minutes
+    performance_metrics: 30_minutes
+  
+  auto_remove:
+    - completed_todos
+    - successful_test_output
+    - old_search_results
+    - duplicate_information
+    - verbose_logs
+
+# Intelligent summarization
+summarization:
+  triggers:
+    - context_above_75_percent
+    - before_major_task
+    - on_user_request
+    - after_milestone
+  
+  strategies:
+    long_files:
+      method: extract_relevant_sections
+      preserve: 
+        - function_signatures
+        - class_definitions
+        - important_comments
+        - error_locations
+    
+    conversation_history:
+      method: progressive_summary
+      keep_recent: 5_exchanges
+      summarize_older: true
+    
+    search_results:
+      method: top_relevance
+      max_results: 10
+      include_context: 2_lines
+    
+    test_output:
+      method: failures_and_summary
+      always_include:
+        - failed_tests
+        - error_messages
+        - coverage_summary
+
+# Parallel context management
+parallel_contexts:
+  max_parallel: 3
+  isolation_level: partial
+  
+  shared_context:
+    - project_configuration
+    - CLAUDE.md
+    - common_utilities
+    - shared_types
+  
+  isolated_context:
+    - task_specific_files
+    - agent_working_memory
+    - temporary_results
+  
+  merge_strategy:
+    on_completion: selective_merge
+    conflict_resolution: latest_wins
+    preserve_important: true
+
+# Context quality metrics
+quality_metrics:
+  relevance_scoring:
+    algorithm: semantic_similarity
+    threshold: 0.5
+    update_frequency: per_exchange
+  
+  redundancy_detection:
+    enabled: true
+    merge_similar: true
+    similarity_threshold: 0.85
+  
+  staleness_check:
+    enabled: true
+    mark_stale_after: 30_minutes
+    auto_refresh:
+      - file_contents
+      - test_results
+      - dependency_status
+
+# Optimization strategies
+optimization_strategies:
+  
+  # Token-efficient representations
+  efficient_representation:
+    code_blocks:
+      show_structure: true
+      collapse_implementations: false
+      highlight_changes: true
+    
+    file_trees:
+      max_depth: 3
+      show_file_count: true
+      indicate_modifications: true
+    
+    error_traces:
+      max_stack_depth: 5
+      highlight_user_code: true
+      summarize_library_calls: true
+  
+  # Dynamic context adjustment
+  dynamic_adjustment:
+    increase_context_for:
+      - complex_debugging
+      - architecture_design
+      - multi_file_refactoring
+    
+    decrease_context_for:
+      - simple_queries
+      - documentation_lookup
+      - single_file_edits
+  
+  # Predictive loading
+  predictive_loading:
+    enabled: true
+    strategies:
+      test_files: load_when_editing_source
+      dependencies: load_when_importing
+      documentation: load_when_implementing
+      examples: load_when_learning
+
+# Context recovery
+recovery_strategies:
+  
+  on_overflow:
+    1: auto_compact
+    2: summarize_old_context
+    3: archive_to_file
+    4: selective_clear
+    5: full_reset
+  
+  on_corruption:
+    1: restore_from_checkpoint
+    2: rebuild_from_files
+    3: minimal_safe_context
+    4: request_user_guidance
+  
+  on_confusion:
+    1: clarify_with_user
+    2: review_recent_context
+    3: reset_to_checkpoint
+    4: break_down_task
+
+# Advanced features
+advanced_features:
+  
+  # Semantic chunking
+  semantic_chunking:
+    enabled: true
+    chunk_by:
+      - logical_units
+      - functionality
+      - dependencies
+      - complexity
+  
+  # Context streaming
+  streaming:
+    enabled: true
+    buffer_size: 10000_tokens
+    flush_on:
+      - logical_boundary
+      - size_threshold
+      - time_limit
+  
+  # Multi-model context
+  multi_model:
+    enabled: false
+    share_context_with:
+      - code_generation_model
+      - review_model
+      - test_generation_model
+    
+  # Context versioning
+  versioning:
+    enabled: true
+    checkpoint_on:
+      - major_changes
+      - before_risky_operations
+      - user_request
+    max_checkpoints: 5
+    auto_cleanup: true
+
+# Usage patterns
+usage_patterns:
+  
+  development_workflow:
+    research:
+      context_focus: broad_search
+      retention: temporary
+      optimization: speed
+    
+    planning:
+      context_focus: architecture
+      retention: session
+      optimization: completeness
+    
+    implementation:
+      context_focus: specific_files
+      retention: working_memory
+      optimization: accuracy
+    
+    testing:
+      context_focus: test_and_source
+      retention: until_passing
+      optimization: coverage
+    
+    debugging:
+      context_focus: error_context
+      retention: until_fixed
+      optimization: detail
+
+# Performance tuning
+performance_tuning:
+  
+  batch_operations:
+    enabled: true
+    batch_size: 5
+    parallel_execution: true
+  
+  caching:
+    aggressive: true
+    preload_common: true
+    cache_warming: true
+  
+  lazy_evaluation:
+    enabled: true
+    defer_expensive: true
+    compute_on_demand: true
+  
+  monitoring:
+    track_usage: true
+    identify_patterns: true
+    optimize_automatically: true

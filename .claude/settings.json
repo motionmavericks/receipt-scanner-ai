@@ -1,0 +1,151 @@
+{
+  "permissionMode": "default",
+  "model": "claude-3-5-sonnet-latest",
+  "maxTurns": 30,
+  "maxOutputTokens": 8192,
+  "temperature": 0.7,
+  "tools": {
+    "enabled": [
+      "Read",
+      "Write",
+      "Edit",
+      "MultiEdit",
+      "NotebookEdit",
+      "Bash",
+      "Glob",
+      "Grep",
+      "LS",
+      "WebSearch",
+      "WebFetch",
+      "Task",
+      "TodoWrite",
+      "ExitPlanMode",
+      "BashOutput",
+      "KillBash"
+    ],
+    "autoApprove": {
+      "Read": true,
+      "Glob": true,
+      "Grep": true,
+      "LS": true,
+      "WebSearch": true,
+      "TodoWrite": true
+    },
+    "requireApproval": {
+      "Write": true,
+      "Edit": true,
+      "MultiEdit": true,
+      "Bash": true,
+      "NotebookEdit": true
+    }
+  },
+  "memory": {
+    "enabled": true,
+    "autoSave": true,
+    "importPaths": []
+  },
+  "context": {
+    "compactThreshold": 50000,
+    "autoCompact": true,
+    "preserveImportant": true
+  },
+  "development": {
+    "testFirst": true,
+    "lintOnSave": true,
+    "formatOnSave": false,
+    "autoFixLint": false
+  },
+  "git": {
+    "autoStage": false,
+    "signCommits": false,
+    "pushOnCommit": false,
+    "requireTests": true,
+    "commitFormat": "conventional"
+  },
+  "security": {
+    "scanForSecrets": true,
+    "blockSensitivePatterns": true,
+    "requireCodeReview": false,
+    "enforcePermissions": true
+  },
+  "performance": {
+    "parallelTools": true,
+    "cacheResults": true,
+    "cacheDuration": 900,
+    "maxParallelOperations": 5
+  },
+  "ui": {
+    "theme": "auto",
+    "compactMode": false,
+    "showCosts": true,
+    "showTimestamps": false,
+    "progressIndicators": true
+  },
+  "telemetry": {
+    "enabled": false,
+    "anonymize": true,
+    "level": "error"
+  },
+  "experimental": {
+    "enhancedThinking": true,
+    "multiAgentMode": false,
+    "predictiveCompletion": false
+  },
+  "customCommands": {
+    "path": ".claude/commands",
+    "enabled": true
+  },
+  "hooks": {
+    "configPath": ".claude/hooks.json",
+    "enabled": true
+  },
+  "mcp": {
+    "servers": {},
+    "autoConnect": true
+  },
+  "system_orchestration": {
+    "enabled": true,
+    "config_files": {
+      "orchestrator": ".claude/SYSTEM_ORCHESTRATOR.md",
+      "memory": ".claude/memory-management.json",
+      "context": ".claude/context-strategies.yaml",
+      "deployment": ".claude/self-deployment.json",
+      "coordination": ".claude/agent-coordination.yaml",
+      "automation": ".claude/workflow-automation.json",
+      "monitoring": ".claude/system-monitoring.yaml"
+    },
+    "auto_load": true,
+    "harmonious_mode": true
+  },
+  "aliases": {
+    "t": "test",
+    "r": "review",
+    "o": "optimize",
+    "b": "build",
+    "d": "debug"
+  },
+  "environment": {
+    "NODE_ENV": "development",
+    "CLAUDE_CODE_WORKSPACE": "C:\\projects\\test"
+  },
+  "defaults": {
+    "fileEncoding": "utf-8",
+    "lineEndings": "auto",
+    "indentation": {
+      "style": "spaces",
+      "size": 2
+    }
+  },
+  "notifications": {
+    "onError": true,
+    "onSuccess": false,
+    "onLongRunning": true,
+    "longRunningThreshold": 30000
+  },
+  "backup": {
+    "enabled": false,
+    "path": ".claude/backups",
+    "beforeEdit": false,
+    "retention": 7
+  }
+}

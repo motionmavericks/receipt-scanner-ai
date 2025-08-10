@@ -1,0 +1,86 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mkdir -p .claude/logs && echo \"[$(date '+%Y-%m-%d %H:%M:%S')] $(jq -r '.tool_input.command // \"unknown\"' 2>/dev/null)\" >> .claude/logs/bash-commands.log"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // \"\" ' | { read path; if echo \"$path\" | grep -qE '(\\.env|\\.git/|node_modules/)'; then echo \"[Hook] Warning: Modifying sensitive file: $path\" >&2; exit 2; fi; }"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // \"\"' | { read path; ext=${path##*.}; if [ \"$ext\" = \"ts\" ] || [ \"$ext\" = \"js\" ] || [ \"$ext\" = \"tsx\" ] || [ \"$ext\" = \"jsx\" ]; then if command -v prettier >/dev/null 2>&1; then prettier --write \"$path\" 2>/dev/null && echo \"[Format] Auto-formatted $path\" >&2; fi; fi; }"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // \"\"' | { read path; if echo \"$path\" | grep -q '\\.py$'; then if command -v black >/dev/null 2>&1; then black \"$path\" 2>/dev/null && echo \"[Format] Auto-formatted $path with Black\" >&2; fi; fi; }"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command // \"\"' | { read cmd; if echo \"$cmd\" | grep -qE '^(npm|yarn|pnpm) (run )?test'; then echo \"[Hook] Test execution detected. Consider using test-writer subagent for comprehensive testing.\" >&2; fi; }"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"[Claude Code] Ready for input\" >&2"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"[Session] Task completed. Review logs at .claude/logs/\" >&2"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mkdir -p .claude/logs && echo \"[$(date '+%Y-%m-%d %H:%M:%S')] Subagent completed: $(jq -r '.subagent_name // \"unknown\"' 2>/dev/null)\" >> .claude/logs/subagent-activity.log"
+          }
+        ]
+      }
+    ]
+  }
+}

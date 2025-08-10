@@ -1,0 +1,401 @@
+# System Performance Monitoring and Health Configuration
+
+monitoring:
+  # Performance metrics tracking
+  performance_metrics:
+    enabled: true
+    collection_interval_seconds: 60
+    retention_days: 30
+    
+    metrics:
+      system:
+        - name: context_usage
+          type: gauge
+          unit: tokens
+          warning_threshold: 150000
+          critical_threshold: 180000
+        
+        - name: memory_efficiency
+          type: percentage
+          calculation: (useful_context / total_context) * 100
+          target: 85
+        
+        - name: response_time
+          type: histogram
+          unit: milliseconds
+          percentiles: [50, 90, 95, 99]
+          slo_target_ms: 2000
+        
+        - name: token_consumption_rate
+          type: counter
+          unit: tokens_per_minute
+          budget_limit: 10000
+      
+      agent:
+        - name: agent_execution_time
+          type: histogram
+          unit: seconds
+          per_agent: true
+        
+        - name: agent_success_rate
+          type: percentage
+          calculation: (successful_runs / total_runs) * 100
+          target: 95
+        
+        - name: agent_utilization
+          type: gauge
+          unit: percentage
+          per_agent: true
+      
+      tool:
+        - name: tool_invocation_count
+          type: counter
+          per_tool: true
+        
+        - name: tool_failure_rate
+          type: percentage
+          per_tool: true
+          alert_threshold: 5
+        
+        - name: tool_response_time
+          type: histogram
+          unit: milliseconds
+          per_tool: true
+      
+      workflow:
+        - name: workflow_completion_time
+          type: histogram
+          unit: minutes
+          per_workflow: true
+        
+        - name: workflow_success_rate
+          type: percentage
+          per_workflow: true
+          target: 90
+        
+        - name: workflow_step_duration
+          type: histogram
+          unit: seconds
+          per_step: true
+
+  # System health checks
+  health_checks:
+    startup:
+      enabled: true
+      checks:
+        - name: environment_verification
+          critical: true
+          actions:
+            - verify_node_version
+            - check_disk_space
+            - validate_permissions
+        
+        - name: dependency_check
+          critical: true
+          actions:
+            - verify_required_tools
+            - check_package_integrity
+            - validate_configurations
+        
+        - name: connectivity_check
+          critical: false
+          actions:
+            - test_api_connection
+            - verify_network_access
+            - check_proxy_settings
+    
+    runtime:
+      enabled: true
+      interval_seconds: 300
+      checks:
+        - name: context_health
+          condition: context_usage < 90%
+          action_on_failure: trigger_compaction
+        
+        - name: memory_health
+          condition: memory_efficiency > 70%
+          action_on_failure: optimize_memory
+        
+        - name: response_health
+          condition: avg_response_time < 3000ms
+          action_on_failure: analyze_bottlenecks
+        
+        - name: error_rate_health
+          condition: error_rate < 2%
+          action_on_failure: investigate_errors
+    
+    periodic:
+      daily:
+        - name: security_audit
+          time: "02:00"
+          actions:
+            - scan_for_vulnerabilities
+            - check_dependency_updates
+            - review_access_logs
+        
+        - name: performance_baseline
+          time: "03:00"
+          actions:
+            - run_benchmarks
+            - compare_with_baseline
+            - generate_trend_report
+      
+      weekly:
+        - name: system_optimization
+          day: sunday
+          time: "04:00"
+          actions:
+            - analyze_usage_patterns
+            - optimize_cache_strategy
+            - update_routing_rules
+            - clean_old_artifacts
+
+  # Alerting configuration
+  alerting:
+    enabled: true
+    channels:
+      console:
+        enabled: true
+        min_severity: warning
+      
+      file:
+        enabled: true
+        path: .claude/logs/alerts.log
+        min_severity: info
+      
+      webhook:
+        enabled: false
+        url: "${ALERT_WEBHOOK_URL}"
+        min_severity: error
+    
+    rules:
+      - name: high_context_usage
+        condition: context_usage > 85%
+        severity: warning
+        message: "Context usage at {value}% - consider compaction"
+        cooldown_minutes: 15
+      
+      - name: critical_context_usage
+        condition: context_usage > 95%
+        severity: critical
+        message: "Critical context usage at {value}% - immediate compaction required"
+        auto_action: force_compaction
+      
+      - name: repeated_failures
+        condition: error_count > 5 in 10 minutes
+        severity: error
+        message: "Multiple failures detected - {error_count} errors in last 10 minutes"
+        auto_action: analyze_and_report
+      
+      - name: performance_degradation
+        condition: response_time > 2x baseline
+        severity: warning
+        message: "Performance degraded - response time {value}ms (baseline: {baseline}ms)"
+        auto_action: trigger_optimization
+      
+      - name: agent_failure
+        condition: agent_success_rate < 80%
+        severity: error
+        message: "Agent {agent_name} success rate dropped to {value}%"
+        auto_action: fallback_to_general
+
+  # Performance optimization
+  optimization:
+    auto_optimize:
+      enabled: true
+      triggers:
+        - high_context_usage
+        - slow_response_time
+        - low_cache_hit_rate
+        - frequent_errors
+    
+    strategies:
+      context_optimization:
+        - remove_duplicate_content
+        - summarize_old_context
+        - archive_completed_tasks
+        - compress_verbose_output
+      
+      cache_optimization:
+        - increase_cache_size
+        - adjust_ttl_values
+        - preload_common_data
+        - implement_smart_eviction
+      
+      query_optimization:
+        - batch_similar_queries
+        - cache_frequent_searches
+        - optimize_file_patterns
+        - use_indexed_searches
+      
+      workflow_optimization:
+        - parallelize_independent_tasks
+        - eliminate_redundant_steps
+        - cache_intermediate_results
+        - optimize_agent_selection
+
+  # Diagnostics
+  diagnostics:
+    enabled: true
+    
+    commands:
+      system_status:
+        description: "Show current system status"
+        output:
+          - context_usage
+          - memory_efficiency
+          - active_agents
+          - pending_tasks
+          - recent_errors
+      
+      performance_report:
+        description: "Generate performance report"
+        output:
+          - response_time_histogram
+          - token_usage_trend
+          - agent_performance
+          - tool_usage_stats
+      
+      health_report:
+        description: "Generate health report"
+        output:
+          - failed_checks
+          - warning_conditions
+          - system_recommendations
+          - optimization_suggestions
+      
+      debug_mode:
+        description: "Enable debug mode"
+        actions:
+          - verbose_logging
+          - detailed_traces
+          - performance_profiling
+          - memory_snapshots
+    
+    troubleshooting:
+      slow_performance:
+        checks:
+          - context_size
+          - cache_hit_rate
+          - parallel_execution
+          - query_efficiency
+        
+        solutions:
+          - run_compaction
+          - clear_cache
+          - optimize_queries
+          - reduce_parallel_ops
+      
+      high_error_rate:
+        checks:
+          - error_patterns
+          - resource_availability
+          - configuration_validity
+          - dependency_status
+        
+        solutions:
+          - fix_common_errors
+          - increase_resources
+          - validate_config
+          - update_dependencies
+      
+      memory_issues:
+        checks:
+          - context_growth_rate
+          - cache_size
+          - memory_leaks
+          - retention_policies
+        
+        solutions:
+          - aggressive_pruning
+          - reduce_cache
+          - fix_leaks
+          - adjust_retention
+
+  # Reporting
+  reporting:
+    enabled: true
+    
+    reports:
+      daily_summary:
+        schedule: "23:59"
+        includes:
+          - tasks_completed
+          - errors_encountered
+          - performance_metrics
+          - resource_usage
+      
+      weekly_analysis:
+        schedule: "sunday 23:59"
+        includes:
+          - trend_analysis
+          - optimization_opportunities
+          - agent_effectiveness
+          - cost_analysis
+      
+      monthly_review:
+        schedule: "last_day 23:59"
+        includes:
+          - comprehensive_metrics
+          - system_evolution
+          - recommendation_report
+          - capacity_planning
+    
+    export_formats:
+      - json
+      - markdown
+      - html
+    
+    storage:
+      location: .claude/reports/
+      retention_days: 90
+      compress_old: true
+
+  # Self-healing mechanisms
+  self_healing:
+    enabled: true
+    
+    triggers:
+      context_overflow:
+        threshold: 95%
+        actions:
+          - auto_compact
+          - archive_old_context
+          - clear_duplicates
+      
+      memory_pressure:
+        threshold: 90%
+        actions:
+          - garbage_collection
+          - cache_eviction
+          - close_unused_resources
+      
+      performance_degradation:
+        threshold: 2x_baseline
+        actions:
+          - optimize_queries
+          - reduce_parallelism
+          - enable_caching
+      
+      error_spike:
+        threshold: 10_errors_per_minute
+        actions:
+          - circuit_breaker
+          - fallback_mode
+          - error_analysis
+    
+    recovery_strategies:
+      graceful_degradation:
+        - disable_non_essential_features
+        - reduce_quality_for_speed
+        - limit_parallel_operations
+      
+      circuit_breaker:
+        - stop_failing_operations
+        - use_cached_results
+        - retry_with_backoff
+      
+      automatic_recovery:
+        - reset_problematic_components
+        - reload_configurations
+        - restart_failed_services

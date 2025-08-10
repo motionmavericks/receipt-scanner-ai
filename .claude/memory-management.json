@@ -1,0 +1,257 @@
+{
+  "memory_hierarchy": {
+    "levels": [
+      {
+        "name": "enterprise_policy",
+        "path": "/etc/claude/policy.md",
+        "priority": 1,
+        "scope": "organization",
+        "mutable": false
+      },
+      {
+        "name": "project_memory",
+        "path": "./CLAUDE.md",
+        "priority": 2,
+        "scope": "team",
+        "mutable": true,
+        "auto_update": true
+      },
+      {
+        "name": "user_memory",
+        "path": "~/.claude/CLAUDE.md",
+        "priority": 3,
+        "scope": "personal",
+        "mutable": true
+      }
+    ]
+  },
+  "context_management": {
+    "max_tokens": 200000,
+    "warning_threshold": 150000,
+    "compact_threshold": 50000,
+    "critical_threshold": 180000,
+    "strategies": {
+      "auto_compact": {
+        "enabled": true,
+        "trigger": "threshold_reached",
+        "preserve": [
+          "current_task",
+          "todo_list",
+          "recent_errors",
+          "user_instructions"
+        ],
+        "remove": [
+          "old_search_results",
+          "duplicate_content",
+          "completed_tasks",
+          "verbose_output"
+        ]
+      },
+      "smart_loading": {
+        "enabled": true,
+        "lazy_load": [
+          "test_files",
+          "documentation",
+          "node_modules",
+          "build_artifacts"
+        ],
+        "eager_load": [
+          "current_file",
+          "related_files",
+          "configuration",
+          "dependencies"
+        ]
+      },
+      "incremental_context": {
+        "enabled": true,
+        "chunk_size": 10000,
+        "priority_order": [
+          "user_request",
+          "active_code",
+          "recent_changes",
+          "related_context",
+          "historical_context"
+        ]
+      }
+    }
+  },
+  "cache_management": {
+    "enabled": true,
+    "ttl_seconds": 900,
+    "max_size_mb": 100,
+    "strategies": {
+      "file_cache": {
+        "enabled": true,
+        "patterns": ["*.js", "*.ts", "*.py", "*.go"],
+        "exclude": ["node_modules", ".git", "dist", "build"],
+        "invalidate_on_change": true
+      },
+      "result_cache": {
+        "enabled": true,
+        "cache_items": [
+          "grep_results",
+          "file_listings",
+          "dependency_graphs",
+          "test_results"
+        ],
+        "ttl_override": {
+          "test_results": 300,
+          "dependency_graphs": 1800
+        }
+      },
+      "computation_cache": {
+        "enabled": true,
+        "cache_items": [
+          "complexity_analysis",
+          "security_scans",
+          "performance_metrics"
+        ]
+      }
+    }
+  },
+  "memory_optimization": {
+    "deduplication": {
+      "enabled": true,
+      "strategies": [
+        "content_hashing",
+        "semantic_similarity",
+        "structural_matching"
+      ]
+    },
+    "compression": {
+      "enabled": true,
+      "algorithms": ["summary", "truncation", "sampling"],
+      "targets": [
+        "long_outputs",
+        "repetitive_content",
+        "verbose_logs"
+      ]
+    },
+    "pruning": {
+      "enabled": true,
+      "rules": [
+        {
+          "type": "age_based",
+          "max_age_minutes": 30,
+          "applies_to": ["search_results", "temporary_context"]
+        },
+        {
+          "type": "usage_based",
+          "max_unused_minutes": 10,
+          "applies_to": ["file_contents", "computation_results"]
+        },
+        {
+          "type": "relevance_based",
+          "min_relevance_score": 0.3,
+          "applies_to": ["historical_context", "related_files"]
+        }
+      ]
+    }
+  },
+  "import_management": {
+    "auto_import": {
+      "enabled": true,
+      "sources": [
+        "@./README.md",
+        "@./package.json",
+        "@./.env.example",
+        "@./tsconfig.json"
+      ],
+      "conditional_imports": {
+        "on_error": "@./TROUBLESHOOTING.md",
+        "on_test": "@./test/README.md",
+        "on_deploy": "@./DEPLOYMENT.md"
+      }
+    },
+    "import_optimization": {
+      "max_file_size_kb": 100,
+      "summarize_large_files": true,
+      "extract_relevant_sections": true
+    }
+  },
+  "storage_patterns": {
+    "working_memory": {
+      "description": "Active task context",
+      "max_size_tokens": 50000,
+      "persistence": "session",
+      "contents": [
+        "current_task",
+        "active_files",
+        "recent_changes",
+        "error_context"
+      ]
+    },
+    "reference_memory": {
+      "description": "Project knowledge",
+      "max_size_tokens": 30000,
+      "persistence": "permanent",
+      "contents": [
+        "project_structure",
+        "conventions",
+        "dependencies",
+        "api_contracts"
+      ]
+    },
+    "episodic_memory": {
+      "description": "Task history",
+      "max_size_tokens": 20000,
+      "persistence": "session",
+      "contents": [
+        "completed_tasks",
+        "learned_patterns",
+        "user_preferences",
+        "success_strategies"
+      ]
+    }
+  },
+  "memory_shortcuts": {
+    "enabled": true,
+    "patterns": {
+      "#": "Add to CLAUDE.md",
+      "##": "Add to project notes",
+      "###": "Add to personal memory",
+      "@recall": "Load from memory",
+      "@forget": "Clear specific memory",
+      "@optimize": "Trigger memory optimization"
+    }
+  },
+  "performance_monitoring": {
+    "track_metrics": true,
+    "metrics": [
+      "context_size",
+      "token_usage",
+      "cache_hit_rate",
+      "compaction_frequency",
+      "memory_efficiency"
+    ],
+    "alerts": {
+      "high_context_usage": {
+        "threshold": 0.75,
+        "action": "suggest_compaction"
+      },
+      "low_cache_hit": {
+        "threshold": 0.3,
+        "action": "optimize_cache_strategy"
+      },
+      "frequent_compaction": {
+        "threshold": 5,
+        "window_minutes": 60,
+        "action": "review_memory_strategy"
+      }
+    }
+  },
+  "adaptive_memory": {
+    "enabled": true,
+    "learning": {
+      "track_patterns": true,
+      "optimize_based_on_usage": true,
+      "personalize_to_project": true
+    },
+    "adaptations": {
+      "frequent_files": "prioritize_caching",
+      "common_searches": "pre_cache_results",
+      "repeated_tasks": "create_templates",
+      "user_preferences": "adjust_defaults"
+    }
+  }
+}

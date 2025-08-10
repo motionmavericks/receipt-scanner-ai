@@ -1,0 +1,378 @@
+{
+  "workflow_automation": {
+    "triggers": {
+      "file_operations": {
+        "on_save": {
+          "enabled": true,
+          "debounce_ms": 1000,
+          "actions": {
+            "*.js|*.ts|*.jsx|*.tsx": ["lint", "format", "typecheck"],
+            "*.py": ["black", "pylint", "mypy"],
+            "*.go": ["gofmt", "golint"],
+            "*.rs": ["rustfmt", "clippy"],
+            "*.test.*": ["run_related_tests"],
+            "*.md": ["spell_check", "link_check"]
+          }
+        },
+        "on_create": {
+          "enabled": true,
+          "actions": {
+            "*.test.*": ["generate_test_template"],
+            "*.component.*": ["generate_component_boilerplate"],
+            "*.model.*": ["generate_model_template"]
+          }
+        },
+        "on_delete": {
+          "enabled": true,
+          "actions": {
+            "*.*": ["check_dependencies", "update_imports"]
+          }
+        }
+      },
+      "git_operations": {
+        "pre_commit": {
+          "enabled": true,
+          "blocking": true,
+          "actions": [
+            "run_tests",
+            "check_coverage",
+            "lint_staged",
+            "security_scan",
+            "check_secrets"
+          ]
+        },
+        "post_commit": {
+          "enabled": true,
+          "actions": [
+            "update_changelog",
+            "generate_docs",
+            "notify_team"
+          ]
+        },
+        "pre_push": {
+          "enabled": true,
+          "blocking": true,
+          "actions": [
+            "run_full_test_suite",
+            "check_branch_protection",
+            "verify_ci_status"
+          ]
+        },
+        "on_pr_create": {
+          "enabled": true,
+          "actions": [
+            "comprehensive_review",
+            "generate_pr_summary",
+            "check_merge_conflicts",
+            "validate_requirements"
+          ]
+        }
+      },
+      "error_detection": {
+        "test_failure": {
+          "enabled": true,
+          "immediate": true,
+          "actions": [
+            "analyze_failure",
+            "find_root_cause",
+            "suggest_fix",
+            "update_test"
+          ]
+        },
+        "build_error": {
+          "enabled": true,
+          "immediate": true,
+          "actions": [
+            "diagnose_error",
+            "check_dependencies",
+            "fix_syntax",
+            "retry_build"
+          ]
+        },
+        "runtime_error": {
+          "enabled": true,
+          "immediate": true,
+          "actions": [
+            "capture_context",
+            "analyze_stack_trace",
+            "find_similar_issues",
+            "suggest_debugging_steps"
+          ]
+        },
+        "performance_degradation": {
+          "enabled": true,
+          "threshold_ms": 5000,
+          "actions": [
+            "profile_code",
+            "identify_bottlenecks",
+            "suggest_optimizations",
+            "implement_caching"
+          ]
+        }
+      },
+      "scheduled": {
+        "daily": {
+          "time": "09:00",
+          "actions": [
+            "check_dependencies",
+            "security_audit",
+            "cleanup_artifacts",
+            "generate_reports"
+          ]
+        },
+        "weekly": {
+          "day": "monday",
+          "time": "10:00",
+          "actions": [
+            "full_test_suite",
+            "performance_benchmark",
+            "code_quality_report",
+            "update_documentation"
+          ]
+        },
+        "monthly": {
+          "day": 1,
+          "actions": [
+            "dependency_updates",
+            "license_check",
+            "architecture_review",
+            "technical_debt_assessment"
+          ]
+        }
+      }
+    },
+    "workflows": {
+      "feature_development": {
+        "description": "Complete feature development workflow",
+        "steps": [
+          {
+            "name": "requirements_analysis",
+            "agent": "architect",
+            "outputs": ["design_doc", "tech_spec"]
+          },
+          {
+            "name": "api_design",
+            "agent": "api-designer",
+            "inputs": ["design_doc"],
+            "outputs": ["api_spec", "contracts"]
+          },
+          {
+            "name": "test_creation",
+            "agent": "test-writer",
+            "inputs": ["api_spec"],
+            "outputs": ["test_suite"]
+          },
+          {
+            "name": "implementation",
+            "agent": "general-purpose",
+            "inputs": ["tech_spec", "test_suite"],
+            "outputs": ["source_code"]
+          },
+          {
+            "name": "security_check",
+            "agent": "security-scanner",
+            "inputs": ["source_code"],
+            "outputs": ["security_report"]
+          },
+          {
+            "name": "performance_check",
+            "agent": "performance-optimizer",
+            "inputs": ["source_code"],
+            "outputs": ["performance_report"]
+          },
+          {
+            "name": "code_review",
+            "agent": "code-reviewer",
+            "inputs": ["source_code", "test_suite"],
+            "outputs": ["review_report"]
+          },
+          {
+            "name": "documentation",
+            "agent": "documentation-writer",
+            "inputs": ["source_code", "api_spec"],
+            "outputs": ["documentation"]
+          }
+        ],
+        "on_failure": "rollback_and_notify",
+        "on_success": "merge_and_deploy"
+      },
+      "bug_fix": {
+        "description": "Bug fixing workflow",
+        "steps": [
+          {
+            "name": "reproduce",
+            "agent": "bug-finder",
+            "outputs": ["reproduction_steps", "error_context"]
+          },
+          {
+            "name": "root_cause_analysis",
+            "agent": "bug-finder",
+            "inputs": ["error_context"],
+            "outputs": ["root_cause", "affected_files"]
+          },
+          {
+            "name": "write_failing_test",
+            "agent": "test-writer",
+            "inputs": ["reproduction_steps"],
+            "outputs": ["failing_test"]
+          },
+          {
+            "name": "implement_fix",
+            "agent": "general-purpose",
+            "inputs": ["root_cause", "failing_test"],
+            "outputs": ["fixed_code"]
+          },
+          {
+            "name": "verify_fix",
+            "agent": "test-writer",
+            "inputs": ["fixed_code", "failing_test"],
+            "outputs": ["test_results"]
+          },
+          {
+            "name": "regression_check",
+            "agent": "test-writer",
+            "inputs": ["fixed_code"],
+            "outputs": ["regression_report"]
+          },
+          {
+            "name": "review",
+            "agent": "code-reviewer",
+            "inputs": ["fixed_code", "test_results"],
+            "outputs": ["approval"]
+          }
+        ],
+        "on_failure": "escalate_to_senior",
+        "on_success": "deploy_hotfix"
+      },
+      "refactoring": {
+        "description": "Code refactoring workflow",
+        "steps": [
+          {
+            "name": "analysis",
+            "agent": "refactoring-assistant",
+            "outputs": ["refactoring_plan", "risk_assessment"]
+          },
+          {
+            "name": "ensure_test_coverage",
+            "agent": "test-writer",
+            "outputs": ["coverage_report", "additional_tests"]
+          },
+          {
+            "name": "incremental_refactoring",
+            "agent": "refactoring-assistant",
+            "inputs": ["refactoring_plan"],
+            "outputs": ["refactored_code"],
+            "iterative": true
+          },
+          {
+            "name": "performance_validation",
+            "agent": "performance-optimizer",
+            "inputs": ["refactored_code"],
+            "outputs": ["performance_comparison"]
+          },
+          {
+            "name": "final_review",
+            "agent": "code-reviewer",
+            "inputs": ["refactored_code", "test_results"],
+            "outputs": ["approval"]
+          }
+        ],
+        "on_failure": "revert_changes",
+        "on_success": "merge_gradually"
+      },
+      "deployment": {
+        "description": "Deployment workflow",
+        "steps": [
+          {
+            "name": "pre_deployment_checks",
+            "agent": "devops-engineer",
+            "outputs": ["checklist_status"]
+          },
+          {
+            "name": "security_scan",
+            "agent": "security-scanner",
+            "outputs": ["security_clearance"]
+          },
+          {
+            "name": "build_artifacts",
+            "agent": "devops-engineer",
+            "outputs": ["build_artifacts", "docker_images"]
+          },
+          {
+            "name": "deploy_staging",
+            "agent": "devops-engineer",
+            "inputs": ["build_artifacts"],
+            "outputs": ["staging_url"]
+          },
+          {
+            "name": "smoke_tests",
+            "agent": "test-writer",
+            "inputs": ["staging_url"],
+            "outputs": ["test_results"]
+          },
+          {
+            "name": "performance_tests",
+            "agent": "performance-optimizer",
+            "inputs": ["staging_url"],
+            "outputs": ["performance_results"]
+          },
+          {
+            "name": "deploy_production",
+            "agent": "devops-engineer",
+            "inputs": ["approval", "build_artifacts"],
+            "outputs": ["production_url"]
+          },
+          {
+            "name": "monitor",
+            "agent": "devops-engineer",
+            "inputs": ["production_url"],
+            "outputs": ["monitoring_dashboard"]
+          }
+        ],
+        "on_failure": "rollback_immediately",
+        "on_success": "notify_stakeholders"
+      }
+    },
+    "automation_rules": {
+      "smart_suggestions": {
+        "enabled": true,
+        "suggest_next_action": true,
+        "learn_from_patterns": true,
+        "offer_shortcuts": true
+      },
+      "auto_fix": {
+        "enabled": true,
+        "fix_simple_errors": true,
+        "fix_formatting": true,
+        "fix_imports": true,
+        "require_approval_for": ["logic_changes", "deletion", "major_refactoring"]
+      },
+      "preventive_actions": {
+        "detect_anti_patterns": true,
+        "warn_about_complexity": true,
+        "suggest_best_practices": true,
+        "prevent_common_mistakes": true
+      }
+    },
+    "integration": {
+      "ide_integration": {
+        "enabled": true,
+        "auto_sync": true,
+        "real_time_feedback": true,
+        "inline_suggestions": true
+      },
+      "ci_cd_integration": {
+        "enabled": true,
+        "platforms": ["github_actions", "gitlab_ci", "jenkins"],
+        "auto_configure": true,
+        "optimize_pipeline": true
+      },
+      "monitoring_integration": {
+        "enabled": true,
+        "platforms": ["datadog", "new_relic", "prometheus"],
+        "alert_on_issues": true,
+        "auto_diagnose": true
+      }
+    }
+  }
+}

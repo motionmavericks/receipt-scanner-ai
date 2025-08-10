@@ -1,0 +1,44 @@
+name: Claude Issue to PR
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  issue-to-pr:
+    # Run when 'claude-implement' label is added
+    if: github.event.label.name == 'claude-implement'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Claude Implementation
+        uses: anthropics/claude-code-action@main
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Implement the feature described in issue #${{ github.event.issue.number }}.
+            
+            Steps:
+            1. Analyze the issue requirements
+            2. Create a new branch: feature/issue-${{ github.event.issue.number }}
+            3. Implement the feature following our coding standards
+            4. Write comprehensive tests
+            5. Update documentation if needed
+            6. Create a pull request linking to this issue
+            
+            Follow all guidelines in CLAUDE.md.
+            Use test-driven development approach.
+          max_turns: 50
+          timeout_minutes: 40

@@ -1,0 +1,270 @@
+{
+  "self_deployment": {
+    "auto_detect": {
+      "enabled": true,
+      "detect_on_startup": true,
+      "detection_order": [
+        "package_json",
+        "requirements_txt",
+        "go_mod",
+        "cargo_toml",
+        "gemfile",
+        "build_gradle"
+      ]
+    },
+    "environment_analysis": {
+      "detect_framework": {
+        "frontend": {
+          "react": ["package.json:react", "tsconfig.json", ".jsx files"],
+          "vue": ["package.json:vue", "vue.config.js", ".vue files"],
+          "angular": ["package.json:@angular", "angular.json", ".component.ts"],
+          "svelte": ["package.json:svelte", "svelte.config.js", ".svelte files"]
+        },
+        "backend": {
+          "express": ["package.json:express", "app.js", "server.js"],
+          "fastapi": ["requirements.txt:fastapi", "main.py", "api/"],
+          "django": ["requirements.txt:django", "manage.py", "settings.py"],
+          "rails": ["Gemfile:rails", "config.ru", "app/controllers"]
+        },
+        "mobile": {
+          "react_native": ["package.json:react-native", "metro.config.js"],
+          "flutter": ["pubspec.yaml", "lib/main.dart"],
+          "ionic": ["package.json:@ionic", "ionic.config.json"]
+        }
+      },
+      "detect_tools": {
+        "package_manager": {
+          "npm": "package-lock.json",
+          "yarn": "yarn.lock",
+          "pnpm": "pnpm-lock.yaml",
+          "pip": "requirements.txt",
+          "poetry": "poetry.lock",
+          "cargo": "Cargo.lock"
+        },
+        "test_runner": {
+          "jest": ["package.json:jest", "jest.config.js"],
+          "mocha": ["package.json:mocha", ".mocharc.json"],
+          "pytest": ["pytest.ini", "pyproject.toml:tool.pytest"],
+          "vitest": ["package.json:vitest", "vitest.config.js"]
+        },
+        "linter": {
+          "eslint": [".eslintrc", "package.json:eslint"],
+          "prettier": [".prettierrc", "package.json:prettier"],
+          "pylint": [".pylintrc", "pyproject.toml:tool.pylint"],
+          "rubocop": [".rubocop.yml", "Gemfile:rubocop"]
+        },
+        "bundler": {
+          "webpack": ["webpack.config.js", "package.json:webpack"],
+          "vite": ["vite.config.js", "package.json:vite"],
+          "rollup": ["rollup.config.js", "package.json:rollup"],
+          "parcel": ["package.json:parcel", ".parcelrc"]
+        }
+      }
+    },
+    "auto_configuration": {
+      "create_missing_files": {
+        "CLAUDE.md": {
+          "condition": "not_exists",
+          "template": "default_project_memory"
+        },
+        ".gitignore": {
+          "condition": "not_exists && git_repo",
+          "template": "language_specific"
+        },
+        "README.md": {
+          "condition": "not_exists && user_requests",
+          "template": "project_type_specific"
+        }
+      },
+      "configure_commands": {
+        "build": {
+          "npm": "npm run build",
+          "yarn": "yarn build",
+          "maven": "mvn clean install",
+          "gradle": "./gradlew build",
+          "cargo": "cargo build --release",
+          "make": "make"
+        },
+        "test": {
+          "npm": "npm test",
+          "yarn": "yarn test",
+          "pytest": "pytest",
+          "go": "go test ./...",
+          "cargo": "cargo test",
+          "dotnet": "dotnet test"
+        },
+        "lint": {
+          "eslint": "eslint . --fix",
+          "prettier": "prettier --write .",
+          "pylint": "pylint src/",
+          "rubocop": "rubocop -A"
+        },
+        "format": {
+          "prettier": "prettier --write .",
+          "black": "black .",
+          "rustfmt": "cargo fmt",
+          "gofmt": "go fmt ./..."
+        }
+      },
+      "setup_integrations": {
+        "git_hooks": {
+          "pre_commit": {
+            "enabled": true,
+            "actions": ["lint", "format", "test"]
+          },
+          "commit_msg": {
+            "enabled": true,
+            "format": "conventional"
+          }
+        },
+        "ci_cd": {
+          "github_actions": {
+            "detect": ".github/workflows",
+            "create_if_missing": true,
+            "template": "language_specific"
+          },
+          "gitlab_ci": {
+            "detect": ".gitlab-ci.yml",
+            "create_if_missing": false
+          }
+        }
+      }
+    },
+    "intelligent_routing": {
+      "task_classification": {
+        "patterns": {
+          "feature": ["implement", "add", "create", "new"],
+          "bug": ["fix", "bug", "error", "issue"],
+          "refactor": ["refactor", "improve", "clean", "optimize"],
+          "test": ["test", "coverage", "unit", "integration"],
+          "docs": ["document", "docs", "readme", "comment"],
+          "deploy": ["deploy", "release", "publish", "ship"]
+        },
+        "agent_mapping": {
+          "feature": ["architect", "api-designer", "test-writer", "code-reviewer"],
+          "bug": ["bug-finder", "test-writer", "code-reviewer"],
+          "refactor": ["refactoring-assistant", "test-writer", "performance-optimizer"],
+          "test": ["test-writer", "code-reviewer"],
+          "docs": ["documentation-writer"],
+          "deploy": ["devops-engineer", "security-scanner"]
+        }
+      },
+      "context_routing": {
+        "file_patterns": {
+          "*.test.*": "test_context",
+          "*.spec.*": "test_context",
+          "*.(js|ts|jsx|tsx)": "javascript_context",
+          "*.py": "python_context",
+          "*.go": "go_context",
+          "*.rs": "rust_context",
+          "*.(yml|yaml)": "config_context",
+          "Dockerfile": "docker_context"
+        }
+      }
+    },
+    "adaptive_behavior": {
+      "learn_from_usage": {
+        "track_commands": true,
+        "track_file_patterns": true,
+        "track_error_patterns": true,
+        "track_success_patterns": true
+      },
+      "optimize_workflows": {
+        "cache_frequent_operations": true,
+        "preload_common_files": true,
+        "suggest_automations": true,
+        "create_shortcuts": true
+      },
+      "personalization": {
+        "adapt_to_coding_style": true,
+        "learn_naming_conventions": true,
+        "understand_project_structure": true,
+        "remember_preferences": true
+      }
+    },
+    "deployment_strategies": {
+      "development": {
+        "focus": "speed_and_iteration",
+        "tools": ["hot_reload", "source_maps", "verbose_logging"],
+        "optimizations": ["fast_builds", "detailed_errors"]
+      },
+      "staging": {
+        "focus": "testing_and_validation",
+        "tools": ["integration_tests", "performance_monitoring"],
+        "optimizations": ["realistic_data", "error_tracking"]
+      },
+      "production": {
+        "focus": "performance_and_reliability",
+        "tools": ["minification", "caching", "monitoring"],
+        "optimizations": ["bundle_size", "load_time", "error_handling"]
+      }
+    },
+    "health_monitoring": {
+      "startup_checks": [
+        "verify_dependencies",
+        "check_tool_availability",
+        "validate_configuration",
+        "test_connections"
+      ],
+      "runtime_checks": {
+        "frequency_seconds": 300,
+        "checks": [
+          "memory_usage",
+          "context_size",
+          "response_time",
+          "error_rate"
+        ]
+      },
+      "self_healing": {
+        "on_high_memory": "trigger_garbage_collection",
+        "on_context_overflow": "auto_compact",
+        "on_slow_response": "optimize_queries",
+        "on_repeated_errors": "reset_and_retry"
+      }
+    },
+    "workflow_automation": {
+      "triggers": {
+        "file_save": {
+          "actions": ["lint", "format", "update_imports"],
+          "throttle_ms": 1000
+        },
+        "test_failure": {
+          "actions": ["analyze_failure", "suggest_fix", "update_tests"],
+          "immediate": true
+        },
+        "build_error": {
+          "actions": ["diagnose_error", "fix_syntax", "retry_build"],
+          "immediate": true
+        },
+        "commit_attempt": {
+          "actions": ["run_tests", "check_security", "format_code"],
+          "blocking": true
+        }
+      },
+      "chains": {
+        "feature_development": [
+          "design_api",
+          "write_tests",
+          "implement_code",
+          "run_tests",
+          "review_code",
+          "update_docs"
+        ],
+        "bug_fix": [
+          "reproduce_bug",
+          "write_failing_test",
+          "fix_code",
+          "verify_fix",
+          "check_regressions"
+        ],
+        "release_preparation": [
+          "run_full_tests",
+          "security_scan",
+          "performance_check",
+          "build_artifacts",
+          "generate_changelog"
+        ]
+      }
+    }
+  }
+}

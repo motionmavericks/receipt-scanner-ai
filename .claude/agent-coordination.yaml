@@ -1,0 +1,296 @@
+# Agent Coordination System
+# Ensures all agents work together harmoniously
+
+coordination:
+  # Agent communication protocol
+  communication:
+    message_passing:
+      format: json
+      queue: shared_memory
+      priority_levels: [critical, high, normal, low]
+    
+    event_bus:
+      enabled: true
+      events:
+        - agent_started
+        - agent_completed
+        - agent_failed
+        - agent_needs_help
+        - agent_found_issue
+    
+    shared_state:
+      location: context_memory
+      sync_frequency: per_operation
+      conflict_resolution: last_write_wins
+
+  # Agent orchestration patterns
+  orchestration_patterns:
+    
+    sequential:
+      description: "Agents run one after another"
+      use_cases:
+        - feature_development
+        - bug_fixing
+        - refactoring
+      example_flow:
+        feature:
+          1: architect
+          2: api-designer
+          3: test-writer
+          4: implementation
+          5: security-scanner
+          6: code-reviewer
+          7: documentation-writer
+    
+    parallel:
+      description: "Multiple agents run simultaneously"
+      use_cases:
+        - comprehensive_review
+        - multi_aspect_analysis
+        - independent_tasks
+      example_flow:
+        review:
+          group_1:
+            - security-scanner
+            - performance-optimizer
+          group_2:
+            - code-reviewer
+            - test-writer
+    
+    conditional:
+      description: "Agent selection based on conditions"
+      use_cases:
+        - dynamic_workflows
+        - error_handling
+        - adaptive_responses
+      example_flow:
+        error_handling:
+          if_syntax_error: bug-finder
+          if_test_failure: test-writer
+          if_performance_issue: performance-optimizer
+          if_security_issue: security-scanner
+    
+    recursive:
+      description: "Agents can call themselves or others"
+      use_cases:
+        - deep_analysis
+        - iterative_improvement
+        - complex_problems
+      max_depth: 5
+      example_flow:
+        optimization:
+          1: performance-optimizer
+          2: if_not_satisfied -> refactoring-assistant
+          3: if_still_slow -> performance-optimizer
+          4: validate -> code-reviewer
+
+  # Agent dependencies
+  dependencies:
+    test-writer:
+      requires: [source_code]
+      produces: [test_files, coverage_report]
+      triggers: [code-reviewer]
+    
+    bug-finder:
+      requires: [error_context, source_code]
+      produces: [root_cause, fix_suggestion]
+      triggers: [test-writer, code-reviewer]
+    
+    performance-optimizer:
+      requires: [source_code, performance_metrics]
+      produces: [optimized_code, performance_report]
+      triggers: [test-writer, code-reviewer]
+    
+    security-scanner:
+      requires: [source_code, dependencies]
+      produces: [vulnerability_report, fixes]
+      triggers: [code-reviewer]
+    
+    refactoring-assistant:
+      requires: [source_code, test_suite]
+      produces: [refactored_code]
+      triggers: [test-writer, code-reviewer]
+    
+    api-designer:
+      requires: [requirements, data_models]
+      produces: [api_spec, contracts]
+      triggers: [documentation-writer, test-writer]
+    
+    documentation-writer:
+      requires: [source_code, api_spec]
+      produces: [documentation]
+      triggers: []
+    
+    architect:
+      requires: [requirements, constraints]
+      produces: [architecture_design, tech_stack]
+      triggers: [api-designer]
+    
+    devops-engineer:
+      requires: [source_code, infrastructure_requirements]
+      produces: [ci_cd_pipeline, deployment_config]
+      triggers: [security-scanner]
+    
+    frontend-specialist:
+      requires: [design_specs, api_contracts]
+      produces: [ui_components, styles]
+      triggers: [test-writer, code-reviewer]
+    
+    database-expert:
+      requires: [data_models, query_patterns]
+      produces: [schema, migrations, indexes]
+      triggers: [performance-optimizer]
+
+  # Coordination strategies
+  strategies:
+    
+    workload_distribution:
+      algorithm: weighted_round_robin
+      factors:
+        - agent_expertise
+        - current_load
+        - task_complexity
+        - estimated_time
+    
+    result_aggregation:
+      methods:
+        consensus: majority_vote
+        merge: combine_non_conflicting
+        priority: highest_severity_wins
+        cascade: pass_to_next_agent
+    
+    conflict_resolution:
+      rules:
+        - security_over_performance
+        - correctness_over_speed
+        - maintainability_over_cleverness
+        - user_preference_overrides
+    
+    resource_management:
+      shared_resources:
+        - file_access
+        - tool_invocation
+        - context_space
+        - cache_storage
+      
+      allocation:
+        method: priority_based
+        limits:
+          max_context_per_agent: 30000
+          max_parallel_agents: 3
+          max_tool_calls_per_agent: 50
+
+  # Agent collaboration patterns
+  collaboration:
+    
+    peer_review:
+      description: "Agents review each other's work"
+      pairs:
+        - [test-writer, code-reviewer]
+        - [api-designer, architect]
+        - [security-scanner, devops-engineer]
+    
+    mentorship:
+      description: "Senior agents guide junior agents"
+      relationships:
+        architect: [api-designer, frontend-specialist]
+        database-expert: [performance-optimizer]
+        security-scanner: [devops-engineer]
+    
+    consultation:
+      description: "Agents consult specialists"
+      triggers:
+        database_questions: database-expert
+        ui_questions: frontend-specialist
+        deployment_questions: devops-engineer
+        security_questions: security-scanner
+
+  # Performance optimization
+  optimization:
+    
+    agent_caching:
+      enabled: true
+      cache_results: true
+      ttl_minutes: 15
+      share_cache: true
+    
+    batch_processing:
+      enabled: true
+      batch_similar_tasks: true
+      max_batch_size: 10
+    
+    predictive_loading:
+      enabled: true
+      preload_likely_agents: true
+      based_on: historical_patterns
+    
+    lazy_evaluation:
+      enabled: true
+      defer_expensive_operations: true
+      compute_on_demand: true
+
+  # Monitoring and metrics
+  monitoring:
+    
+    agent_metrics:
+      track:
+        - execution_time
+        - success_rate
+        - resource_usage
+        - output_quality
+        - user_satisfaction
+    
+    collaboration_metrics:
+      track:
+        - handoff_efficiency
+        - communication_overhead
+        - conflict_frequency
+        - resolution_time
+    
+    system_metrics:
+      track:
+        - total_throughput
+        - average_latency
+        - error_rate
+        - resource_utilization
+
+  # Error handling
+  error_handling:
+    
+    agent_failure:
+      retry_count: 2
+      fallback_agent: general-purpose
+      notify_user: true
+      log_error: true
+    
+    timeout:
+      default_seconds: 300
+      per_agent_override:
+        architect: 600
+        performance-optimizer: 600
+        security-scanner: 600
+    
+    recovery:
+      strategies:
+        - retry_with_different_context
+        - use_simpler_agent
+        - break_into_smaller_tasks
+        - request_user_guidance
+
+  # Agent learning
+  learning:
+    
+    pattern_recognition:
+      track_successful_flows: true
+      identify_optimal_sequences: true
+      adapt_routing: true
+    
+    feedback_loop:
+      collect_user_feedback: true
+      measure_outcome_quality: true
+      adjust_agent_selection: true
+    
+    knowledge_sharing:
+      share_learned_patterns: true
+      update_agent_configs: true
+      improve_collaboration: true
