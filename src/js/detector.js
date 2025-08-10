@@ -226,22 +226,39 @@ export class Detector {
         tagName: canvas.tagName
       });
       
-      // Try using ImageData instead of Canvas as some models prefer it
+      // Convert canvas to blob URL for transformers library compatibility
       let modelInput = canvas;
       try {
-        const ctx = canvas.getContext('2d');
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        console.log('DEBUG: Created ImageData:', {
-          width: imageData.width,
-          height: imageData.height,
-          dataLength: imageData.data.length
+        // Method 1: Try converting canvas to Blob URL (most compatible)
+        const blob = await new Promise((resolve) => {
+          canvas.toBlob(resolve, 'image/png');
         });
-        // Use ImageData as model input
-        modelInput = imageData;
-      } catch (imageDataError) {
-        console.warn('Could not create ImageData, using canvas directly:', imageDataError.message);
-        modelInput = canvas;
+        
+        if (blob) {
+          const blobUrl = URL.createObjectURL(blob);
+          console.log('DEBUG: Created blob URL for model input:', blobUrl);
+          modelInput = blobUrl;
+          
+          // Clean up the blob URL after detection
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+        } else {
+          console.warn('Could not create blob from canvas');
+        }
+      } catch (blobError) {
+        console.warn('Could not convert canvas to blob, trying data URL:', blobError.message);
+        
+        // Method 2: Try data URL as fallback
+        try {
+          const dataUrl = canvas.toDataURL('image/png');
+          console.log('DEBUG: Created data URL for model input (first 100 chars):', dataUrl.substring(0, 100));
+          modelInput = dataUrl;
+        } catch (dataUrlError) {
+          console.error('Could not convert canvas to data URL, using canvas directly:', dataUrlError.message);
+          modelInput = canvas;
+        }
       }
+      
+      console.log('DEBUG: Final model input type:', typeof modelInput);
       
       // Run detection with proper error handling
       const results = await this.model(modelInput, {
