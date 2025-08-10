@@ -1,0 +1,215 @@
+import { pipeline, env } from '@xenova/transformers';
+
+// Configure Transformers.js
+env.allowLocalModels = false;
+env.useBrowserCache = true;
+
+export class Detector {
+  constructor() {
+    this.model = null;
+    this.modelName = null;
+    this.isLoading = false;
+    this.modelCache = new Map();
+    
+    // Model configurations
+    this.models = {
+      'yolos-tiny': {
+        name: 'Xenova/yolos-tiny',
+        size: 'tiny',
+        speed: 'fast'
+      },
+      'yolos-small': {
+        name: 'Xenova/yolos-small', 
+        size: 'small',
+        speed: 'balanced'
+      },
+      'detr-resnet-50': {
+        name: 'Xenova/detr-resnet-50',
+        size: 'large',
+        speed: 'slow'
+      }
+    };
+  }
+
+  async init(modelName = 'yolos-tiny') {
+    if (this.isLoading) {
+      console.log('Model is already loading...');
+      return;
+    }
+    
+    this.isLoading = true;
+    
+    try {
+      // Check if model is cached
+      if (this.modelCache.has(modelName)) {
+        this.model = this.modelCache.get(modelName);
+        this.modelName = modelName;
+        console.log(`Loaded cached model: ${modelName}`);
+      } else {
+        // Load the model
+        const modelConfig = this.models[modelName];
+        if (!modelConfig) {
+          throw new Error(`Unknown model: ${modelName}`);
+        }
+        
+        console.log(`Loading model: ${modelConfig.name}`);
+        
+        // Create object detection pipeline
+        this.model = await pipeline('object-detection', modelConfig.name, {
+          quantized: true, // Use quantized model for better performance
+          progress_callback: (progress) => {
+            console.log(`Loading progress: ${Math.round(progress * 100)}%`);
+            const event = new CustomEvent('model-progress', { detail: progress });
+            window.dispatchEvent(event);
+          }
+        });
+        
+        // Cache the model
+        this.modelCache.set(modelName, this.model);
+        this.modelName = modelName;
+        
+        console.log(`Model loaded successfully: ${modelName}`);
+      }
+      
+    } catch (error) {
+      console.error('Failed to load model:', error);
+      throw error;
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  async switchModel(modelName) {
+    await this.init(modelName);
+  }
+
+  async detect(source) {
+    if (!this.model) {
+      throw new Error('Model not initialized. Call init() first.');
+    }
+    
+    try {
+      // Create canvas if source is video element
+      let imageData;
+      
+      if (source instanceof HTMLVideoElement) {
+        const canvas = document.createElement('canvas');
+        canvas.width = source.videoWidth;
+        canvas.height = source.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(source, 0, 0);
+        imageData = canvas;
+      } else if (source instanceof HTMLCanvasElement) {
+        imageData = source;
+      } else if (source instanceof HTMLImageElement) {
+        const canvas = document.createElement('canvas');
+        canvas.width = source.naturalWidth;
+        canvas.height = source.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(source, 0, 0);
+        imageData = canvas;
+      } else {
+        imageData = source;
+      }
+      
+      // Run detection
+      const results = await this.model(imageData, {
+        threshold: 0.5,
+        percentage: false // Get pixel coordinates instead of percentages
+      });
+      
+      // Format results for our use case
+      return this.formatResults(results, imageData);
+      
+    } catch (error) {
+      console.error('Detection error:', error);
+      return [];
+    }
+  }
+
+  formatResults(results, canvas) {
+    if (!results || !Array.isArray(results)) return [];
+    
+    // Get canvas dimensions for scaling
+    const width = canvas.width || canvas.videoWidth;
+    const height = canvas.height || canvas.videoHeight;
+    
+    return results.map(result => {
+      // Ensure we have proper box coordinates
+      let box;
+      
+      if (result.box) {
+        box = result.box;
+      } else if (result.bbox) {
+        // Some models return bbox instead of box
+        const [x, y, w, h] = result.bbox;
+        box = { x, y, width: w, height: h };
+      } else {
+        // Fallback to xmin, ymin, xmax, ymax format
+        box = {
+          x: result.xmin || 0,
+          y: result.ymin || 0,
+          width: (result.xmax || width) - (result.xmin || 0),
+          height: (result.ymax || height) - (result.ymin || 0)
+        };
+      }
+      
+      return {
+        label: result.label || 'object',
+        score: result.score || 0,
+        box: {
+          x: Math.round(box.x),
+          y: Math.round(box.y),
+          width: Math.round(box.width || box.w || 0),
+          height: Math.round(box.height || box.h || 0)
+        }
+      };
+    });
+  }
+
+  isReceiptCandidate(detection) {
+    // Check if detection could be a receipt
+    const receiptLabels = [
+      'paper', 'document', 'receipt', 'invoice', 
+      'bill', 'ticket', 'card', 'note', 'letter'
+    ];
+    
+    const label = detection.label?.toLowerCase() || '';
+    
+    // Check if label matches receipt-like objects
+    const isLabelMatch = receiptLabels.some(receiptLabel => 
+      label.includes(receiptLabel)
+    );
+    
+    // Check aspect ratio (receipts are usually taller than wide)
+    const aspectRatio = detection.box.height / detection.box.width;
+    const isReceiptShape = aspectRatio > 1.2 && aspectRatio < 4;
+    
+    // Check minimum size (avoid tiny detections)
+    const area = detection.box.width * detection.box.height;
+    const minArea = 10000; // Minimum 100x100 pixels
+    const isSizeValid = area > minArea;
+    
+    return (isLabelMatch || detection.score > 0.8) && isSizeValid;
+  }
+
+  async detectReceipts(source) {
+    const allDetections = await this.detect(source);
+    return allDetections.filter(d => this.isReceiptCandidate(d));
+  }
+
+  dispose() {
+    // Clean up resources
+    this.model = null;
+    this.modelCache.clear();
+  }
+
+  getModelInfo() {
+    if (!this.modelName) return null;
+    
+    return {
+      name: this.modelName,
+      ...this.models[this.modelName]
+    };
+  }
+}

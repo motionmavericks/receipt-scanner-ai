@@ -6,11 +6,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Development Commands
 ```bash
-# No project-specific commands yet - this appears to be a new project
-# When you add a project framework, update this section with appropriate commands
+# Receipt Ingest Project - Commands will be added as the project develops
+# Common patterns for receipt processing projects:
+
+# Python-based receipt processing
+# python -m venv venv && source venv/bin/activate  # Setup virtual environment
+# pip install -r requirements.txt                  # Install dependencies
+# python main.py                                   # Run the application
+# pytest                                           # Run tests
+
+# Node.js-based receipt processing
+# npm install                                      # Install dependencies
+# npm run dev                                      # Run in development mode
+# npm test                                         # Run tests
+# npm run build                                    # Build for production
 ```
 
 ## System Architecture
+
+### Receipt Ingest Project Structure (To Be Implemented)
+This project will handle receipt processing and data extraction. Key components to consider:
+
+- **OCR/Text Extraction**: Extract text from receipt images or PDFs
+- **Data Parser**: Parse extracted text into structured data
+- **Data Validation**: Validate and clean extracted receipt data
+- **Storage Layer**: Store processed receipt data
+- **API/Interface**: Expose receipt data through API or UI
+
+### Common Receipt Processing Patterns
+- Image preprocessing (deskewing, noise reduction)
+- OCR processing (Tesseract, cloud OCR services)
+- Entity extraction (vendor, date, total, line items)
+- Data normalization and validation
+- Export formats (JSON, CSV, database)
 
 ### Claude Code Configuration Structure
 This repository contains a comprehensive Claude Code setup with:
@@ -121,13 +149,17 @@ When reviewing PRs:
 - GitHub App installation: https://github.com/apps/claude
 
 ## Project-Specific Notes
-- **Working Directory**: C:\projects\test
+- **Working Directory**: C:\projects\receipt-ingest
 - **Platform**: Windows (win32)
-- **Project Status**: New/Empty project with Claude Code infrastructure ready
+- **Project Type**: Receipt processing and data extraction system
+- **Project Status**: Template initialized, ready for receipt ingest implementation
 - **Configuration**: Full Claude Code setup with subagents, hooks, orchestration, and GitHub Actions
 
-### Next Steps for New Projects
-When initializing a new project in this directory:
-1. Choose your framework/language and initialize it
-2. Update the "Development Commands" section above with build/test/lint commands
-3. The Claude Code infrastructure will automatically adapt to your project type
+### Next Steps for Receipt Ingest Project
+1. Choose technology stack (Python with pytesseract/opencv, Node.js with tesseract.js, or cloud-based OCR)
+2. Set up receipt image/PDF handling pipeline
+3. Implement OCR and text extraction logic
+4. Create data parsing and validation modules
+5. Set up storage solution (database or file-based)
+6. Build API or UI for receipt data access
+7. Update the "Development Commands" section with actual build/test/lint commands
