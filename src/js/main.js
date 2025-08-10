@@ -25,6 +25,10 @@ class ReceiptScanner {
     
     this.detectionLoop = null;
     this.lastDetection = null;
+    this.errorCount = 0;
+    this.lastErrorTime = 0;
+    this.maxConsecutiveErrors = 5;
+    this.errorBackoffMs = 1000;
   }
 
   async init() {
@@ -142,7 +146,14 @@ class ReceiptScanner {
   }
 
   startDetection() {
-    if (this.detectionLoop) return;
+    if (this.detectionLoop) {
+      console.warn('Detection loop already running, ignoring start request');
+      return;
+    }
+    
+    // Reset error tracking when starting fresh
+    this.errorCount = 0;
+    this.lastErrorTime = 0;
     
     const video = document.getElementById('camera-feed');
     const overlay = document.getElementById('detection-overlay');
@@ -230,30 +241,57 @@ class ReceiptScanner {
         let detections = [];
         try {
           detections = await this.detector.detect(video);
+          // Reset error count on successful detection
+          this.errorCount = 0;
         } catch (detectionError) {
           console.error('Detection failed:', detectionError.message);
           
-          // If it's an input type error, re-validate the video element
-          if (detectionError.message.includes('Unsupported input type') || 
-              detectionError.message.includes('object')) {
-            console.warn('Video element validation failed during detection, re-checking...');
-            
-            if (!this.isVideoReady(video)) {
-              console.warn('Video is no longer ready, pausing detection');
-              this.ui.updateStatus('Camera connection lost - reconnecting...', 'warning');
-              
-              // Try to reinitialize after a delay
-              setTimeout(() => {
-                this.startDetection();
-              }, 1000);
-              
-              return; // Exit this detection loop
-            }
+          // Increment error count and check circuit breaker
+          this.errorCount++;
+          const now = Date.now();
+          
+          // Circuit breaker: stop if too many consecutive errors
+          if (this.errorCount >= this.maxConsecutiveErrors) {
+            console.error(`Circuit breaker triggered: ${this.errorCount} consecutive errors`);
+            this.ui.updateStatus('Detection system failure - please refresh page', 'error');
+            this.stopDetection(); // Stop the current loop
+            return; // Exit completely
           }
           
-          // For other errors, continue but log them
-          console.warn('Continuing detection despite error:', detectionError.message);
-          detections = []; // Set to empty array to continue
+          // Rate limiting: don't retry too quickly
+          if (now - this.lastErrorTime < this.errorBackoffMs) {
+            console.warn('Error backoff in effect, skipping detection');
+            detections = [];
+          } else {
+            this.lastErrorTime = now;
+            
+            // If it's an input type error, re-validate the video element
+            if (detectionError.message.includes('Unsupported input type') || 
+                detectionError.message.includes('object')) {
+              console.warn('Video element validation failed during detection, re-checking...');
+              
+              if (!this.isVideoReady(video)) {
+                console.warn('Video is no longer ready, stopping current loop');
+                this.ui.updateStatus('Camera connection lost - please refresh page', 'warning');
+                this.stopDetection(); // Stop current loop properly
+                
+                // Try to reinitialize after a longer delay with exponential backoff
+                const backoffDelay = Math.min(this.errorBackoffMs * Math.pow(2, this.errorCount - 1), 10000);
+                setTimeout(() => {
+                  if (this.detectionLoop === null) { // Only restart if not already running
+                    console.log('Attempting to restart detection after video failure');
+                    this.startDetection();
+                  }
+                }, backoffDelay);
+                
+                return; // Exit this detection loop
+              }
+            }
+            
+            // For other errors, continue but log them
+            console.warn('Continuing detection despite error:', detectionError.message);
+            detections = []; // Set to empty array to continue
+          }
         }
         
         // Clear overlay
@@ -294,7 +332,12 @@ class ReceiptScanner {
     if (this.detectionLoop) {
       cancelAnimationFrame(this.detectionLoop);
       this.detectionLoop = null;
+      console.log('Detection loop stopped');
     }
+    
+    // Reset error tracking when stopping
+    this.errorCount = 0;
+    this.lastErrorTime = 0;
   }
 
   isVideoReady(video) {
@@ -578,6 +621,16 @@ class ReceiptScanner {
     
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.1);
+  }
+  
+  getDetectionStatus() {
+    return {
+      isRunning: this.detectionLoop !== null,
+      errorCount: this.errorCount,
+      lastErrorTime: this.lastErrorTime,
+      maxErrors: this.maxConsecutiveErrors,
+      backoffMs: this.errorBackoffMs
+    };
   }
 }
 

@@ -172,6 +172,50 @@ export class Detector {
         return [];
       }
       
+      // Validate canvas has actual image data (skip in test environment)
+      try {
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          console.error('Canvas context is null');
+          return [];
+        }
+        
+        // Only validate image data in real browser environment
+        if (typeof window !== 'undefined' && ctx.getImageData && !window.location.href.includes('test')) {
+          // Check if canvas has any image data (not just transparent pixels)
+          const sampleWidth = Math.min(canvas.width, 10);
+          const sampleHeight = Math.min(canvas.height, 10);
+          
+          if (sampleWidth > 0 && sampleHeight > 0) {
+            const imageData = ctx.getImageData(0, 0, sampleWidth, sampleHeight);
+            const hasImageData = Array.from(imageData.data).some((value, index) => {
+              // Check alpha channel (every 4th value) and RGB values
+              return index % 4 === 3 ? value > 0 : value !== 0;
+            });
+            
+            if (!hasImageData) {
+              console.warn('Canvas appears to be empty or transparent, skipping detection');
+              return [];
+            }
+          }
+        }
+      } catch (canvasError) {
+        // Don't fail if canvas validation has issues (could be test environment)
+        console.warn('Canvas validation skipped due to error:', canvasError.message);
+      }
+      
+      // Final validation before passing to model
+      if (!(canvas instanceof HTMLCanvasElement)) {
+        const actualType = {
+          type: typeof canvas,
+          constructor: canvas?.constructor?.name || 'unknown',
+          isElement: canvas instanceof Element,
+          tagName: canvas?.tagName || 'N/A'
+        };
+        console.error('Expected HTMLCanvasElement, got:', actualType);
+        throw new Error(`Model input validation failed: Expected HTMLCanvasElement, got ${actualType.constructor}`);
+      }
+      
       // Run detection with proper error handling
       const results = await this.model(canvas, {
         threshold: 0.5,

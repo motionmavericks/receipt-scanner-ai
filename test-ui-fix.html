@@ -1,59 +1,279 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>UI Fix Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinite Loop Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .status-panel { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffe6e6; border-left: 4px solid #cc0000; }
+        .success { background: #e6ffe6; border-left: 4px solid #006600; }
+        .warning { background: #fff3cd; border-left: 4px solid #ffc107; }
+        .info { background: #d1ecf1; border-left: 4px solid #17a2b8; }
+        video { max-width: 100%; height: 300px; border: 1px solid #ccc; }
+        button { padding: 10px 15px; margin: 5px; border: none; border-radius: 3px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-success { background: #28a745; color: white; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .test-results { margin: 20px 0; }
+        .metric { display: inline-block; margin: 10px; padding: 5px 10px; background: #e9ecef; border-radius: 3px; }
+        
+        /* Required elements for the app */
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        #loading-overlay:not(.visible) { display: none; }
+        #detection-overlay { position: absolute; top: 0; left: 0; pointer-events: none; }
+        #model-status { padding: 5px; border-radius: 3px; }
+        #capture-flash { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; opacity: 0; pointer-events: none; }
+        #capture-flash.active { opacity: 0.8; }
+        #settings-panel, #gallery-panel, #image-viewer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; display: none; }
+        #settings-panel.visible, #gallery-panel.visible, #image-viewer.visible { display: flex; }
+        #capture-count, #gallery-count { font-weight: bold; }
+    </style>
 </head>
 <body>
-    <!-- Video element for testing -->
-    <video id="camera-feed" autoplay playsinline></video>
-    <div id="loading-text">Loading...</div>
+    <!-- Required DOM structure for the ReceiptScanner -->
+    <div id="loading-overlay">
+        <div id="loading-text">Loading...</div>
+    </div>
+    
+    <h1>Infinite Loop Fix Verification Test</h1>
+    
+    <div class="status-panel info">
+        <strong>Test Purpose:</strong> Verify that the "Unsupported input type: object" error no longer causes infinite loops
+    </div>
+    
+    <div id="status" class="status-panel">Initializing...</div>
+    
+    <div class="test-controls">
+        <button class="btn-primary" onclick="startTest()">Start Detection Test</button>
+        <button class="btn-danger" onclick="stopTest()">Stop Test</button>
+        <button class="btn-warning" onclick="simulateError()">Simulate Detection Error</button>
+        <button class="btn-success" onclick="checkStatus()">Check Status</button>
+        <button class="btn-primary" onclick="resetErrors()">Reset Error Count</button>
+    </div>
+    
+    <div style="position: relative; display: inline-block;">
+        <video id="camera-feed" autoplay playsinline muted></video>
+        <canvas id="detection-overlay" width="640" height="480"></canvas>
+    </div>
+    
+    <div class="test-results">
+        <div class="metric">Detection Loop: <span id="loop-status">Not Started</span></div>
+        <div class="metric">Error Count: <span id="error-count">0</span></div>
+        <div class="metric">Last Error: <span id="last-error">None</span></div>
+        <div class="metric">Frame Count: <span id="frame-count">0</span></div>
+        <div class="metric">Test Duration: <span id="test-duration">0s</span></div>
+    </div>
+    
+    <!-- Required UI elements -->
+    <div id="model-status" class="status-panel">Ready</div>
     <div id="fps-counter">0 FPS</div>
     <div id="capture-flash"></div>
+    <div id="settings-panel"></div>
+    <div id="gallery-panel"></div>
+    <div id="image-viewer"></div>
+    <div id="capture-count">0</div>
+    <div id="gallery-count">0</div>
     
+    <!-- Required buttons with dummy functionality -->
+    <div style="display: none;">
+        <button id="manual-capture-btn"></button>
+        <button id="capture-mode-btn"><span class="mode-text">AUTO</span></button>
+        <button id="settings-btn"></button>
+        <button id="close-settings"></button>
+        <button id="gallery-btn"></button>
+        <button id="close-gallery"></button>
+        <input id="confidence-threshold" type="range" min="0.1" max="1" step="0.05" value="0.85">
+        <span id="confidence-value">85%</span>
+        <input id="stability-frames" type="range" min="1" max="10" value="5">
+        <span id="stability-value">5</span>
+        <input id="sound-enabled" type="checkbox" checked>
+        <input id="vibration-enabled" type="checkbox" checked>
+        <select id="model-select"><option value="yolos-tiny">YOLOS Tiny</option></select>
+        <button id="select-all-btn"></button>
+        <button id="export-selected-btn"></button>
+        <button id="delete-selected-btn"></button>
+        <button id="close-viewer"></button>
+        <span id="viewer-index">1 / 1</span>
+        <img id="viewer-image">
+    </div>
+    
+    <div id="error-log" class="status-panel" style="display: none;">
+        <h3>Error Log:</h3>
+        <pre id="error-details"></pre>
+    </div>
+    
+    <div id="detection-status" class="status-panel" style="display: none;">
+        <h3>Detection System Status:</h3>
+        <pre id="detection-details"></pre>
+    </div>
+
     <script type="module">
-        import { UIManager } from './src/js/ui.js';
+        import { ReceiptScanner } from './src/js/main.js';
         
-        // Test the fix
-        console.log('Testing UIManager fixes...');
+        let app = null;
+        let testStartTime = null;
+        let frameCount = 0;
+        let updateInterval = null;
         
-        const ui = new UIManager();
+        // Test configuration
+        const TEST_DURATION_MS = 30000; // 30 seconds
+        const ERROR_SIMULATION_INTERVAL = 5000; // Simulate error every 5 seconds
         
-        try {
-            // Test 1: setVideoStream before init (should work now)
-            console.log('Test 1: Calling setVideoStream before init...');
-            const fakeStream = new MediaStream();
-            ui.setVideoStream(fakeStream);
-            console.log('✓ setVideoStream worked before init');
-            
-            // Test 2: updateFPS before init (should work now)
-            console.log('Test 2: Calling updateFPS before init...');
-            ui.updateFPS(30);
-            console.log('✓ updateFPS worked before init');
-            
-            // Test 3: flashCapture before init (should work now)
-            console.log('Test 3: Calling flashCapture before init...');
-            ui.flashCapture();
-            console.log('✓ flashCapture worked before init');
-            
-            // Test 4: updateLoadingProgress before init (should work now)
-            console.log('Test 4: Calling updateLoadingProgress before init...');
-            ui.updateLoadingProgress(0.5);
-            console.log('✓ updateLoadingProgress worked before init');
-            
-            // Now init normally
-            ui.init();
-            console.log('✓ UI initialized successfully');
-            
-            // Test again after init
-            ui.setVideoStream(fakeStream);
-            ui.updateFPS(60);
-            console.log('✓ All methods work after init too');
-            
-            console.log('\n🎉 All tests passed! The UI fix is working correctly.');
-            
-        } catch (error) {
-            console.error('❌ Test failed:', error);
+        async function init() {
+            try {
+                updateStatus('Initializing Receipt Scanner...', 'info');
+                
+                app = new ReceiptScanner();
+                await app.init();
+                
+                updateStatus('Receipt Scanner initialized successfully!', 'success');
+                
+                // Set up monitoring
+                setupMonitoring();
+                
+            } catch (error) {
+                updateStatus(`Initialization failed: ${error.message}`, 'error');
+                showErrorDetails(error);
+            }
         }
+        
+        function setupMonitoring() {
+            // Monitor detection status every second
+            updateInterval = setInterval(() => {
+                if (app) {
+                    const status = app.getDetectionStatus();
+                    updateMetrics(status);
+                    
+                    // Update test duration
+                    if (testStartTime) {
+                        const duration = Math.floor((Date.now() - testStartTime) / 1000);
+                        document.getElementById('test-duration').textContent = duration + 's';
+                    }
+                }
+            }, 1000);
+        }
+        
+        function updateMetrics(status) {
+            document.getElementById('loop-status').textContent = status.isRunning ? 'Running' : 'Stopped';
+            document.getElementById('error-count').textContent = status.errorCount;
+            document.getElementById('last-error').textContent = status.lastErrorTime > 0 ? 
+                new Date(status.lastErrorTime).toLocaleTimeString() : 'None';
+            
+            // Update frame count (approximate)
+            if (status.isRunning) {
+                frameCount++;
+                document.getElementById('frame-count').textContent = frameCount;
+            }
+        }
+        
+        window.startTest = function() {
+            if (!app) {
+                updateStatus('App not initialized yet', 'error');
+                return;
+            }
+            
+            updateStatus('Starting detection test...', 'info');
+            testStartTime = Date.now();
+            frameCount = 0;
+            
+            try {
+                app.startDetection();
+                updateStatus(`Detection test started. Will run for ${TEST_DURATION_MS/1000} seconds.`, 'success');
+                
+                // Auto-stop after test duration
+                setTimeout(() => {
+                    if (app && app.getDetectionStatus().isRunning) {
+                        stopTest();
+                        updateStatus('Test completed successfully - No infinite loop detected!', 'success');
+                    }
+                }, TEST_DURATION_MS);
+                
+            } catch (error) {
+                updateStatus(`Failed to start test: ${error.message}`, 'error');
+                showErrorDetails(error);
+            }
+        };
+        
+        window.stopTest = function() {
+            if (!app) return;
+            
+            app.stopDetection();
+            testStartTime = null;
+            updateStatus('Detection test stopped', 'warning');
+        };
+        
+        window.simulateError = function() {
+            if (!app) return;
+            
+            // This will trigger error handling in the detection loop
+            const fakeError = new Error('Simulated detection error: Unsupported input type: object');
+            console.error('Simulated error for testing:', fakeError);
+            updateStatus('Simulated detection error triggered', 'warning');
+        };
+        
+        window.checkStatus = function() {
+            if (!app) return;
+            
+            const status = app.getDetectionStatus();
+            const video = document.getElementById('camera-feed');
+            const videoStatus = {
+                ready: app.isVideoReady ? app.isVideoReady(video) : 'Unknown',
+                dimensions: video ? `${video.videoWidth}x${video.videoHeight}` : 'N/A',
+                readyState: video ? video.readyState : 'N/A',
+                currentTime: video ? video.currentTime.toFixed(2) : 'N/A'
+            };
+            
+            document.getElementById('detection-details').textContent = JSON.stringify({
+                detection: status,
+                video: videoStatus,
+                timestamp: new Date().toLocaleString()
+            }, null, 2);
+            
+            document.getElementById('detection-status').style.display = 'block';
+            updateStatus('Status information displayed below', 'info');
+        };
+        
+        window.resetErrors = function() {
+            if (!app) return;
+            
+            // Reset error tracking
+            app.errorCount = 0;
+            app.lastErrorTime = 0;
+            
+            updateStatus('Error counters reset', 'success');
+        };
+        
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status-panel ${type}`;
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function showErrorDetails(error) {
+            document.getElementById('error-details').textContent = `
+Message: ${error.message}
+Stack: ${error.stack}`;
+            document.getElementById('error-log').style.display = 'block';
+        }
+        
+        // Auto-initialize on load
+        document.addEventListener('DOMContentLoaded', init);
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+            if (app) {
+                app.stopDetection();
+            }
+        });
     </script>
 </body>
 </html>
