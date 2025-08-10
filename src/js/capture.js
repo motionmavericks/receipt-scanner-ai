@@ -15,25 +15,99 @@ export class CaptureManager {
       return false;
     }
     
-    // Check if detection is stable
-    if (this.isStable(detection.box)) {
+    // Analyze detection quality first
+    const quality = this.analyzeQuality(detection, { width: 1920, height: 1080 }); // Use reasonable default
+    
+    // Only proceed if quality is decent
+    if (quality.overall < 0.3) {
+      this.stabilityFrames = 0;
+      this.lastBox = { ...detection.box };
+      return false;
+    }
+    
+    // Enhanced stability check with multiple criteria
+    if (this.isStableEnhanced(detection.box, detection.score)) {
       this.stabilityFrames++;
       
+      // Adaptive stability requirements based on quality
+      const adaptiveFrames = this.getAdaptiveStabilityFrames(quality, requiredStabilityFrames);
+      
       // Capture if stable for required frames
-      if (this.stabilityFrames >= requiredStabilityFrames) {
+      if (this.stabilityFrames >= adaptiveFrames) {
         this.lastCaptureTime = now;
         this.reset();
         return true;
       }
     } else {
-      this.stabilityFrames = 0;
+      // Decay stability frames instead of resetting to 0
+      this.stabilityFrames = Math.max(0, this.stabilityFrames - 2);
     }
     
-    // Update last box for next comparison
+    // Update last box and history
     this.lastBox = { ...detection.box };
     this.updateHistory(detection.box);
     
     return false;
+  }
+
+  getAdaptiveStabilityFrames(quality, baseFrames) {
+    // Reduce required frames for high-quality detections
+    if (quality.overall > 0.8) {
+      return Math.max(2, Math.floor(baseFrames * 0.6));
+    } else if (quality.overall > 0.6) {
+      return Math.max(3, Math.floor(baseFrames * 0.8));
+    }
+    return baseFrames;
+  }
+
+  isStableEnhanced(currentBox, confidence) {
+    if (!this.lastBox) {
+      this.lastBox = { ...currentBox };
+      return false;
+    }
+    
+    // Calculate movement between frames
+    const movement = this.calculateMovement(this.lastBox, currentBox);
+    
+    // Dynamic threshold based on confidence and box size
+    const baseThreshold = 10;
+    const confidenceMultiplier = Math.max(0.5, 2 - confidence * 2); // Higher confidence = lower threshold
+    const sizeMultiplier = Math.min(2, Math.sqrt(currentBox.width * currentBox.height) / 100); // Larger boxes allow more movement
+    const threshold = baseThreshold * confidenceMultiplier * sizeMultiplier;
+    
+    // Check multiple stability criteria
+    const positionStable = movement.distance < threshold;
+    const sizeStable = movement.sizeChange < (currentBox.width + currentBox.height) * 0.1; // 10% size change tolerance
+    const recentStability = this.calculateRecentStability() > 0.7;
+    
+    return positionStable && sizeStable && recentStability;
+  }
+
+  calculateRecentStability() {
+    if (this.boxHistory.length < 3) return 0;
+    
+    // Analyze last few frames for stability
+    const recentFrames = this.boxHistory.slice(-5);
+    let totalMovement = 0;
+    let totalSizeChange = 0;
+    
+    for (let i = 1; i < recentFrames.length; i++) {
+      const movement = this.calculateMovement(
+        recentFrames[i - 1].box,
+        recentFrames[i].box
+      );
+      totalMovement += movement.distance;
+      totalSizeChange += movement.sizeChange;
+    }
+    
+    const avgMovement = totalMovement / (recentFrames.length - 1);
+    const avgSizeChange = totalSizeChange / (recentFrames.length - 1);
+    
+    // Stability score based on movement and size consistency
+    const movementScore = Math.max(0, 1 - avgMovement / 30);
+    const sizeScore = Math.max(0, 1 - avgSizeChange / 50);
+    
+    return (movementScore + sizeScore) / 2;
   }
 
   isStable(currentBox) {

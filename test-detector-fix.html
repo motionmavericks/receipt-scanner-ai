@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Detector Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        video { max-width: 640px; height: auto; border: 1px solid #ccc; }
+        .info { margin: 20px 0; padding: 10px; background: #f5f5f5; }
+        .error { background: #ffe6e6; color: #cc0000; }
+        .success { background: #e6ffe6; color: #006600; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Receipt Detector Fix Test</h1>
+    
+    <div id="status" class="info">Initializing...</div>
+    
+    <video id="test-video" autoplay playsinline muted style="display: block;"></video>
+    
+    <div style="margin: 20px 0;">
+        <button onclick="testDetector()">Test Detection</button>
+        <button onclick="testVideoCapture()">Test Video Info</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script type="module">
+        import { Detector } from './src/js/detector.js';
+        
+        let video, detector, stream;
+        
+        async function init() {
+            try {
+                updateStatus('Requesting camera access...', 'info');
+                
+                // Get camera stream
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                });
+                
+                // Set up video
+                video = document.getElementById('test-video');
+                video.srcObject = stream;
+                
+                await new Promise(resolve => {
+                    video.onloadedmetadata = () => {
+                        video.play();
+                        resolve();
+                    };
+                });
+                
+                updateStatus('Camera initialized. Loading AI model...', 'info');
+                
+                // Initialize detector
+                detector = new Detector();
+                await detector.init('yolos-tiny');
+                
+                updateStatus('Ready! Video dimensions: ' + video.videoWidth + 'x' + video.videoHeight, 'success');
+                
+            } catch (error) {
+                updateStatus('Error: ' + error.message, 'error');
+                console.error(error);
+            }
+        }
+        
+        window.testDetector = async function() {
+            if (!detector || !video) {
+                updateStatus('Not initialized yet', 'error');
+                return;
+            }
+            
+            try {
+                updateStatus('Running detection...', 'info');
+                const detections = await detector.detect(video);
+                
+                const results = document.getElementById('results');
+                results.innerHTML = '<h3>Detection Results:</h3>';
+                
+                if (detections.length === 0) {
+                    results.innerHTML += '<p>No objects detected</p>';
+                } else {
+                    results.innerHTML += '<ul>';
+                    detections.forEach((det, i) => {
+                        results.innerHTML += `<li>Detection ${i + 1}: ${det.label} (${Math.round(det.score * 100)}%) at [${det.box.x}, ${det.box.y}, ${det.box.width}, ${det.box.height}]</li>`;
+                    });
+                    results.innerHTML += '</ul>';
+                }
+                
+                updateStatus('Detection completed successfully!', 'success');
+                
+            } catch (error) {
+                updateStatus('Detection error: ' + error.message, 'error');
+                console.error('Detection error:', error);
+            }
+        };
+        
+        window.testVideoCapture = function() {
+            if (!video) {
+                updateStatus('Video not initialized', 'error');
+                return;
+            }
+            
+            const info = {
+                videoWidth: video.videoWidth,
+                videoHeight: video.videoHeight,
+                readyState: video.readyState,
+                currentTime: video.currentTime,
+                duration: video.duration,
+                paused: video.paused,
+                ended: video.ended,
+                elementType: video.constructor.name
+            };
+            
+            document.getElementById('results').innerHTML = '<h3>Video Element Info:</h3><pre>' + JSON.stringify(info, null, 2) + '</pre>';
+            updateStatus('Video info displayed', 'info');
+        };
+        
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `info ${type}`;
+        }
+        
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>

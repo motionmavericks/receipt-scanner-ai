@@ -199,6 +199,14 @@ export class UIManager {
           this.elements.cameraFeed = document.getElementById('camera-feed');
           
           if (this.elements.cameraFeed) {
+            // Verify it's a video element
+            if (!(this.elements.cameraFeed instanceof HTMLVideoElement)) {
+              const error = new Error('Camera feed element is not a video element');
+              console.error('Expected HTMLVideoElement, got:', this.elements.cameraFeed.constructor.name);
+              reject(error);
+              return;
+            }
+            
             this.elements.cameraFeed.srcObject = stream;
             console.log('Camera feed element found and stream set successfully');
             resolve();
@@ -216,6 +224,13 @@ export class UIManager {
         tryFindElement();
       });
     } else {
+      // Verify it's a video element
+      if (!(this.elements.cameraFeed instanceof HTMLVideoElement)) {
+        const error = new Error('Camera feed element is not a video element');
+        console.error('Expected HTMLVideoElement, got:', this.elements.cameraFeed.constructor.name);
+        return Promise.reject(error);
+      }
+      
       // Element found immediately
       this.elements.cameraFeed.srcObject = stream;
       console.log('Camera feed stream set successfully');

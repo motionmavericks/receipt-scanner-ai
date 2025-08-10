@@ -88,41 +88,107 @@ export class Detector {
       throw new Error('Model not initialized. Call init() first.');
     }
     
+    // Enhanced source validation
+    if (!source) {
+      console.error('Detection error: Source is null or undefined');
+      return [];
+    }
+    
     try {
-      // Create canvas if source is video element
-      let imageData;
+      // Convert source to canvas for consistent processing
+      let canvas;
       
       if (source instanceof HTMLVideoElement) {
-        const canvas = document.createElement('canvas');
+        // Enhanced video validation
+        if (!source.videoWidth || !source.videoHeight) {
+          console.warn('Video dimensions not available:', {
+            videoWidth: source.videoWidth,
+            videoHeight: source.videoHeight,
+            readyState: source.readyState,
+            networkState: source.networkState
+          });
+          return [];
+        }
+        
+        // Check video readiness
+        if (source.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+          console.warn('Video not ready for processing:', {
+            readyState: source.readyState,
+            currentTime: source.currentTime
+          });
+          return [];
+        }
+        
+        canvas = document.createElement('canvas');
         canvas.width = source.videoWidth;
         canvas.height = source.videoHeight;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(source, 0, 0);
-        imageData = canvas;
+        
+        // Validate canvas context
+        if (!ctx) {
+          console.error('Failed to get 2D context from canvas');
+          return [];
+        }
+        
+        try {
+          ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+        } catch (drawError) {
+          console.error('Failed to draw video to canvas:', drawError);
+          return [];
+        }
+        
       } else if (source instanceof HTMLCanvasElement) {
-        imageData = source;
+        canvas = source;
+        
       } else if (source instanceof HTMLImageElement) {
-        const canvas = document.createElement('canvas');
+        // Ensure image has loaded dimensions
+        if (source.naturalWidth === 0 || source.naturalHeight === 0) {
+          console.warn('Image dimensions not available, skipping detection');
+          return [];
+        }
+        
+        canvas = document.createElement('canvas');
         canvas.width = source.naturalWidth;
         canvas.height = source.naturalHeight;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(source, 0, 0);
-        imageData = canvas;
+        ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+        
       } else {
-        imageData = source;
+        const sourceInfo = {
+          type: typeof source,
+          constructor: source?.constructor?.name || 'unknown',
+          isElement: source instanceof Element,
+          isNode: source instanceof Node,
+          tagName: source?.tagName || 'N/A'
+        };
+        
+        console.error('Unsupported input type for detection:', sourceInfo);
+        throw new Error(`Unsupported input type: ${sourceInfo.constructor || sourceInfo.type}. Expected HTMLVideoElement, HTMLCanvasElement, or HTMLImageElement. Received: ${JSON.stringify(sourceInfo)}`);
       }
       
-      // Run detection
-      const results = await this.model(imageData, {
+      // Ensure we have a valid canvas with dimensions
+      if (!canvas || canvas.width === 0 || canvas.height === 0) {
+        console.warn('Invalid canvas dimensions, skipping detection');
+        return [];
+      }
+      
+      // Run detection with proper error handling
+      const results = await this.model(canvas, {
         threshold: 0.5,
         percentage: false // Get pixel coordinates instead of percentages
       });
       
       // Format results for our use case
-      return this.formatResults(results, imageData);
+      return this.formatResults(results, canvas);
       
     } catch (error) {
       console.error('Detection error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        sourceType: typeof source,
+        sourceConstructor: source?.constructor?.name
+      });
       return [];
     }
   }

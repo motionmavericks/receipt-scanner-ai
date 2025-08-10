@@ -144,11 +144,16 @@ class ReceiptScanner {
   startDetection() {
     if (this.detectionLoop) return;
     
-    const canvas = document.getElementById('camera-feed');
+    const video = document.getElementById('camera-feed');
     const overlay = document.getElementById('detection-overlay');
     
-    if (!canvas) {
+    if (!video) {
       console.error('Camera feed element not found for detection');
+      return;
+    }
+    
+    if (!(video instanceof HTMLVideoElement)) {
+      console.error('Camera feed element is not a video element:', video.constructor?.name);
       return;
     }
     
@@ -157,6 +162,36 @@ class ReceiptScanner {
       return;
     }
     
+    // Wait for video to be ready before starting detection
+    if (!this.isVideoReady(video)) {
+      console.log('Video not ready yet, waiting for video to load...');
+      
+      let attempts = 0;
+      const maxAttempts = 50; // 5 seconds maximum wait time
+      
+      const waitForVideo = () => {
+        attempts++;
+        if (this.isVideoReady(video)) {
+          console.log('Video is now ready, starting detection');
+          this.startDetectionLoop(video, overlay);
+        } else if (attempts >= maxAttempts) {
+          console.error('Video failed to become ready within timeout period');
+          this.ui.showError('Camera failed to initialize properly. Please refresh the page.');
+          return;
+        } else {
+          // Retry in 100ms
+          setTimeout(waitForVideo, 100);
+        }
+      };
+      
+      waitForVideo();
+      return;
+    }
+    
+    this.startDetectionLoop(video, overlay);
+  }
+
+  startDetectionLoop(video, overlay) {
     const ctx = overlay.getContext('2d');
     
     let frameCount = 0;
@@ -175,9 +210,51 @@ class ReceiptScanner {
         this.ui.updateFPS(fps);
       }
       
+      // Ensure overlay matches video dimensions
+      if (video.videoWidth && video.videoHeight) {
+        if (overlay.width !== video.videoWidth || overlay.height !== video.videoHeight) {
+          overlay.width = video.videoWidth;
+          overlay.height = video.videoHeight;
+        }
+      }
+      
       // Run detection every 3rd frame for performance
       if (frameCount % 3 === 0) {
-        const detections = await this.detector.detect(canvas);
+        // Validate video element before detection
+        if (!this.isVideoReady(video)) {
+          console.warn('Video not ready for detection, skipping frame');
+          this.detectionLoop = requestAnimationFrame(detectFrame);
+          return;
+        }
+        
+        let detections = [];
+        try {
+          detections = await this.detector.detect(video);
+        } catch (detectionError) {
+          console.error('Detection failed:', detectionError.message);
+          
+          // If it's an input type error, re-validate the video element
+          if (detectionError.message.includes('Unsupported input type') || 
+              detectionError.message.includes('object')) {
+            console.warn('Video element validation failed during detection, re-checking...');
+            
+            if (!this.isVideoReady(video)) {
+              console.warn('Video is no longer ready, pausing detection');
+              this.ui.updateStatus('Camera connection lost - reconnecting...', 'warning');
+              
+              // Try to reinitialize after a delay
+              setTimeout(() => {
+                this.startDetection();
+              }, 1000);
+              
+              return; // Exit this detection loop
+            }
+          }
+          
+          // For other errors, continue but log them
+          console.warn('Continuing detection despite error:', detectionError.message);
+          detections = []; // Set to empty array to continue
+        }
         
         // Clear overlay
         ctx.clearRect(0, 0, overlay.width, overlay.height);
@@ -195,6 +272,9 @@ class ReceiptScanner {
                 const shouldCapture = this.capture.shouldCapture(detection, this.settings.stabilityFrames);
                 if (shouldCapture) {
                   await this.performCapture();
+                } else {
+                  // Update UI with stability info
+                  this.updateStabilityStatus(detection);
                 }
               }
               
@@ -217,6 +297,50 @@ class ReceiptScanner {
     }
   }
 
+  isVideoReady(video) {
+    // Comprehensive video element validation
+    if (!video) {
+      console.warn('Video element is null or undefined');
+      return false;
+    }
+    
+    if (!(video instanceof HTMLVideoElement)) {
+      console.error('Expected HTMLVideoElement, got:', video.constructor?.name || typeof video);
+      return false;
+    }
+    
+    // Check if video has proper dimensions
+    if (!video.videoWidth || !video.videoHeight) {
+      console.warn('Video dimensions not available:', { 
+        videoWidth: video.videoWidth, 
+        videoHeight: video.videoHeight,
+        readyState: video.readyState 
+      });
+      return false;
+    }
+    
+    // Check if video is actually playing/ready
+    if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+      console.warn('Video not ready for reading:', { 
+        readyState: video.readyState,
+        networkState: video.networkState,
+        currentTime: video.currentTime
+      });
+      return false;
+    }
+    
+    // Check if video stream is active
+    if (video.srcObject) {
+      const tracks = video.srcObject.getVideoTracks();
+      if (tracks.length === 0 || !tracks[0].enabled) {
+        console.warn('No active video tracks found');
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
   isReceiptLike(detection) {
     const receiptLabels = ['paper', 'document', 'receipt', 'invoice', 'bill', 'ticket'];
     return receiptLabels.some(label => 
@@ -229,30 +353,143 @@ class ReceiptScanner {
     
     // Set style based on confidence
     const confidence = detection.score;
-    const color = confidence > 0.9 ? '#00ff00' : confidence > 0.7 ? '#ffff00' : '#ff9900';
+    const stabilityStats = this.capture.getStats();
+    const isStable = stabilityStats.stabilityFrames > 0;
+    const stabilityProgress = Math.min(stabilityStats.stabilityFrames / this.settings.stabilityFrames, 1);
     
+    // Color based on stability and confidence
+    let color;
+    if (stabilityProgress >= 1) {
+      color = '#00ff00'; // Green when ready to capture
+    } else if (isStable) {
+      color = '#ffff00'; // Yellow when stabilizing
+    } else {
+      color = confidence > 0.9 ? '#00ff00' : confidence > 0.7 ? '#ffff00' : '#ff9900';
+    }
+    
+    // Draw main bounding box
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = isStable ? 3 : 2;
     ctx.strokeRect(x, y, width, height);
     
-    // Draw label
+    // Draw stability progress bar if stabilizing
+    if (isStable && stabilityProgress < 1) {
+      const barWidth = width * 0.8;
+      const barHeight = 6;
+      const barX = x + (width - barWidth) / 2;
+      const barY = y + height + 8;
+      
+      // Background bar
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(barX, barY, barWidth, barHeight);
+      
+      // Progress bar
+      ctx.fillStyle = color;
+      ctx.fillRect(barX, barY, barWidth * stabilityProgress, barHeight);
+      
+      // Progress text
+      ctx.fillStyle = color;
+      ctx.font = '12px system-ui';
+      const progressText = `Stabilizing... ${Math.round(stabilityProgress * 100)}%`;
+      const progressTextWidth = ctx.measureText(progressText).width;
+      ctx.fillText(progressText, barX + (barWidth - progressTextWidth) / 2, barY + barHeight + 14);
+    }
+    
+    // Draw countdown circle if almost ready
+    if (stabilityProgress >= 0.8 && stabilityProgress < 1) {
+      const centerX = x + width / 2;
+      const centerY = y + height / 2;
+      const radius = 20;
+      
+      // Countdown circle background
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.fill();
+      
+      // Countdown arc
+      ctx.strokeStyle = '#00ff00';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius - 2, -Math.PI / 2, -Math.PI / 2 + (2 * Math.PI * stabilityProgress));
+      ctx.stroke();
+      
+      // Countdown text
+      const countdown = Math.max(1, this.settings.stabilityFrames - stabilityStats.stabilityFrames);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 16px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(countdown.toString(), centerX, centerY + 5);
+      ctx.textAlign = 'start'; // Reset alignment
+    }
+    
+    // Draw label with enhanced info
     ctx.fillStyle = color;
     ctx.font = '14px system-ui';
-    const label = `${detection.label} ${Math.round(confidence * 100)}%`;
+    const confidence_text = `${Math.round(confidence * 100)}%`;
+    const status_text = stabilityProgress >= 1 ? 'READY' : isStable ? 'STABILIZING' : 'DETECTING';
+    const label = `${detection.label} ${confidence_text} - ${status_text}`;
     const textWidth = ctx.measureText(label).width;
     
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(x, y - 20, textWidth + 8, 20);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(x, y - 24, textWidth + 8, 24);
     
     ctx.fillStyle = color;
-    ctx.fillText(label, x + 4, y - 5);
+    ctx.fillText(label, x + 4, y - 6);
+    
+    // Draw corner indicators for better visibility
+    if (stabilityProgress >= 0.5) {
+      this.drawCornerIndicators(ctx, { x, y, width, height }, color, stabilityProgress);
+    }
+  }
+
+  drawCornerIndicators(ctx, box, color, progress) {
+    const { x, y, width, height } = box;
+    const cornerSize = 15 + (progress * 5); // Grow with stability
+    const thickness = 2 + progress; // Thicker when more stable
+    
+    ctx.strokeStyle = color;
+    ctx.lineWidth = thickness;
+    
+    // Top-left
+    ctx.beginPath();
+    ctx.moveTo(x, y + cornerSize);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x + cornerSize, y);
+    ctx.stroke();
+    
+    // Top-right
+    ctx.beginPath();
+    ctx.moveTo(x + width - cornerSize, y);
+    ctx.lineTo(x + width, y);
+    ctx.lineTo(x + width, y + cornerSize);
+    ctx.stroke();
+    
+    // Bottom-left
+    ctx.beginPath();
+    ctx.moveTo(x, y + height - cornerSize);
+    ctx.lineTo(x, y + height);
+    ctx.lineTo(x + cornerSize, y + height);
+    ctx.stroke();
+    
+    // Bottom-right
+    ctx.beginPath();
+    ctx.moveTo(x + width - cornerSize, y + height);
+    ctx.lineTo(x + width, y + height);
+    ctx.lineTo(x + width, y + height - cornerSize);
+    ctx.stroke();
   }
 
   async performCapture() {
-    const canvas = document.getElementById('camera-feed');
+    const video = document.getElementById('camera-feed');
+    
+    if (!video) {
+      console.error('Camera feed not found for capture');
+      return;
+    }
     
     // Capture image
-    const blob = await this.camera.captureImage(canvas);
+    const blob = await this.camera.captureImage(video);
     
     // Save to storage
     const metadata = {
@@ -308,6 +545,22 @@ class ReceiptScanner {
     document.getElementById('gallery-count').textContent = count;
   }
 
+  updateStabilityStatus(detection) {
+    const stabilityStats = this.capture.getStats();
+    const progress = Math.min(stabilityStats.stabilityFrames / this.settings.stabilityFrames, 1);
+    
+    if (stabilityStats.stabilityFrames > 0) {
+      const remainingFrames = Math.max(0, this.settings.stabilityFrames - stabilityStats.stabilityFrames);
+      const message = remainingFrames > 0 
+        ? `Stabilizing... ${remainingFrames} frames remaining`
+        : 'Ready to capture!';
+      
+      this.ui.updateStatus(message, progress >= 1 ? 'success' : 'info');
+    } else if (detection.score >= this.settings.confidenceThreshold) {
+      this.ui.updateStatus('Receipt detected - keep steady', 'info');
+    }
+  }
+
   playSound() {
     // Create a simple capture sound
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -327,6 +580,9 @@ class ReceiptScanner {
     oscillator.stop(audioContext.currentTime + 0.1);
   }
 }
+
+// Export for testing
+export { ReceiptScanner };
 
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
