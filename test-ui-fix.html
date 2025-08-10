@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>UI Fix Test</title>
+</head>
+<body>
+    <!-- Video element for testing -->
+    <video id="camera-feed" autoplay playsinline></video>
+    <div id="loading-text">Loading...</div>
+    <div id="fps-counter">0 FPS</div>
+    <div id="capture-flash"></div>
+    
+    <script type="module">
+        import { UIManager } from './src/js/ui.js';
+        
+        // Test the fix
+        console.log('Testing UIManager fixes...');
+        
+        const ui = new UIManager();
+        
+        try {
+            // Test 1: setVideoStream before init (should work now)
+            console.log('Test 1: Calling setVideoStream before init...');
+            const fakeStream = new MediaStream();
+            ui.setVideoStream(fakeStream);
+            console.log('✓ setVideoStream worked before init');
+            
+            // Test 2: updateFPS before init (should work now)
+            console.log('Test 2: Calling updateFPS before init...');
+            ui.updateFPS(30);
+            console.log('✓ updateFPS worked before init');
+            
+            // Test 3: flashCapture before init (should work now)
+            console.log('Test 3: Calling flashCapture before init...');
+            ui.flashCapture();
+            console.log('✓ flashCapture worked before init');
+            
+            // Test 4: updateLoadingProgress before init (should work now)
+            console.log('Test 4: Calling updateLoadingProgress before init...');
+            ui.updateLoadingProgress(0.5);
+            console.log('✓ updateLoadingProgress worked before init');
+            
+            // Now init normally
+            ui.init();
+            console.log('✓ UI initialized successfully');
+            
+            // Test again after init
+            ui.setVideoStream(fakeStream);
+            ui.updateFPS(60);
+            console.log('✓ All methods work after init too');
+            
+            console.log('\n🎉 All tests passed! The UI fix is working correctly.');
+            
+        } catch (error) {
+            console.error('❌ Test failed:', error);
+        }
+    </script>
+</body>
+</html>

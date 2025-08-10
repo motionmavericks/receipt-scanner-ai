@@ -29,6 +29,9 @@ class ReceiptScanner {
 
   async init() {
     try {
+      // Initialize UI first to ensure DOM elements are cached
+      this.ui.init();
+      
       // Show loading overlay
       this.ui.showLoading('Initializing camera...');
       
@@ -37,14 +40,13 @@ class ReceiptScanner {
       
       // Initialize camera
       const stream = await this.camera.init();
-      this.ui.setVideoStream(stream);
+      await this.ui.setVideoStream(stream);
       
       // Initialize detector with selected model
       this.ui.showLoading('Loading AI model...');
       await this.detector.init(this.settings.model);
       
-      // Initialize UI
-      this.ui.init();
+      // Setup event listeners
       this.setupEventListeners();
       
       // Initialize gallery
@@ -144,6 +146,17 @@ class ReceiptScanner {
     
     const canvas = document.getElementById('camera-feed');
     const overlay = document.getElementById('detection-overlay');
+    
+    if (!canvas) {
+      console.error('Camera feed element not found for detection');
+      return;
+    }
+    
+    if (!overlay) {
+      console.error('Detection overlay element not found');
+      return;
+    }
+    
     const ctx = overlay.getContext('2d');
     
     let frameCount = 0;
@@ -321,11 +334,4 @@ document.addEventListener('DOMContentLoaded', () => {
   app.init();
 });
 
-// Register service worker for PWA
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(reg => console.log('Service worker registered'))
-      .catch(err => console.error('Service worker registration failed:', err));
-  });
-}
+// Service worker registration is handled automatically by VitePWA plugin

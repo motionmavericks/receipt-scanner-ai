@@ -5,6 +5,11 @@ export class UIManager {
   }
 
   init() {
+    // Ensure DOM is ready
+    if (document.readyState === 'loading') {
+      console.warn('DOM not ready during UI init, elements may not be available');
+    }
+    
     // Cache DOM elements
     this.elements = {
       loadingOverlay: document.getElementById('loading-overlay'),
@@ -18,6 +23,13 @@ export class UIManager {
       viewerImage: document.getElementById('viewer-image'),
       cameraFeed: document.getElementById('camera-feed')
     };
+    
+    // Log missing elements for debugging
+    Object.entries(this.elements).forEach(([key, element]) => {
+      if (!element) {
+        console.warn(`UI element not found during init: ${key}`);
+      }
+    });
     
     // Setup event listeners
     this.setupPanelListeners();
@@ -84,7 +96,12 @@ export class UIManager {
 
   updateLoadingProgress(progress) {
     const percentage = Math.round(progress * 100);
-    this.elements.loadingText.textContent = `Loading model... ${percentage}%`;
+    if (!this.elements.loadingText) {
+      this.elements.loadingText = document.getElementById('loading-text');
+    }
+    if (this.elements.loadingText) {
+      this.elements.loadingText.textContent = `Loading model... ${percentage}%`;
+    }
   }
 
   updateStatus(message, type = 'info') {
@@ -109,16 +126,26 @@ export class UIManager {
   }
 
   updateFPS(fps) {
-    this.elements.fpsCounter.textContent = `${fps} FPS`;
+    if (!this.elements.fpsCounter) {
+      this.elements.fpsCounter = document.getElementById('fps-counter');
+    }
+    if (this.elements.fpsCounter) {
+      this.elements.fpsCounter.textContent = `${fps} FPS`;
+    }
   }
 
   flashCapture() {
+    if (!this.elements.captureFlash) {
+      this.elements.captureFlash = document.getElementById('capture-flash');
+    }
     const flash = this.elements.captureFlash;
-    flash.classList.add('active');
-    
-    setTimeout(() => {
-      flash.classList.remove('active');
-    }, 200);
+    if (flash) {
+      flash.classList.add('active');
+      
+      setTimeout(() => {
+        flash.classList.remove('active');
+      }, 200);
+    }
   }
 
   showSettings() {
@@ -154,7 +181,46 @@ export class UIManager {
   }
 
   setVideoStream(stream) {
-    this.elements.cameraFeed.srcObject = stream;
+    // Ensure camera feed element is available with retry mechanism
+    if (!this.elements.cameraFeed) {
+      this.elements.cameraFeed = document.getElementById('camera-feed');
+    }
+    
+    // If still not found, wait a bit and try again
+    if (!this.elements.cameraFeed) {
+      console.warn('Camera feed element not immediately available, retrying...');
+      
+      // Use a promise to handle the retry with timeout
+      return new Promise((resolve, reject) => {
+        const maxRetries = 10;
+        let retryCount = 0;
+        
+        const tryFindElement = () => {
+          this.elements.cameraFeed = document.getElementById('camera-feed');
+          
+          if (this.elements.cameraFeed) {
+            this.elements.cameraFeed.srcObject = stream;
+            console.log('Camera feed element found and stream set successfully');
+            resolve();
+          } else if (retryCount < maxRetries) {
+            retryCount++;
+            console.log(`Retry ${retryCount}/${maxRetries} for camera feed element`);
+            setTimeout(tryFindElement, 100);
+          } else {
+            const error = new Error('Camera feed element not found in DOM after retries');
+            console.error('Camera feed element not found - video element with ID "camera-feed" is missing');
+            reject(error);
+          }
+        };
+        
+        tryFindElement();
+      });
+    } else {
+      // Element found immediately
+      this.elements.cameraFeed.srcObject = stream;
+      console.log('Camera feed stream set successfully');
+      return Promise.resolve();
+    }
   }
 
   showError(message) {
