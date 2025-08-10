@@ -1,1 +1,0 @@
-if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/receipt-scanner-ai/sw.js', { scope: '/receipt-scanner-ai/' })})}

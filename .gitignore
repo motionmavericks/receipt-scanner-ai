@@ -56,3 +56,4 @@ dev-dist/
 *.tmp
 *.temp
 .cache/
+dist/
