@@ -58,12 +58,28 @@ export class UIManager {
   }
 
   showLoading(message = 'Loading...') {
-    this.elements.loadingOverlay.classList.add('visible');
-    this.elements.loadingText.textContent = message;
+    // Ensure elements are available
+    if (!this.elements.loadingOverlay) {
+      this.elements.loadingOverlay = document.getElementById('loading-overlay');
+      this.elements.loadingText = document.getElementById('loading-text');
+    }
+    
+    if (this.elements.loadingOverlay) {
+      this.elements.loadingOverlay.classList.add('visible');
+    }
+    if (this.elements.loadingText) {
+      this.elements.loadingText.textContent = message;
+    }
   }
 
   hideLoading() {
-    this.elements.loadingOverlay.classList.remove('visible');
+    if (!this.elements.loadingOverlay) {
+      this.elements.loadingOverlay = document.getElementById('loading-overlay');
+    }
+    
+    if (this.elements.loadingOverlay) {
+      this.elements.loadingOverlay.classList.remove('visible');
+    }
   }
 
   updateLoadingProgress(progress) {
