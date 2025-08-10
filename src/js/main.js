@@ -27,7 +27,7 @@ class ReceiptScanner {
     this.lastDetection = null;
     this.errorCount = 0;
     this.lastErrorTime = 0;
-    this.maxConsecutiveErrors = 5;
+    this.maxConsecutiveErrors = 2; // Reduce to 2 errors to stop infinite loop faster
     this.errorBackoffMs = 1000;
   }
 
@@ -265,8 +265,17 @@ class ReceiptScanner {
           } else {
             this.lastErrorTime = now;
             
-            // If it's an input type error, re-validate the video element
-            if (detectionError.message.includes('Unsupported input type') || 
+            // EMERGENCY: If it's an input type error, stop immediately
+            if (detectionError.message.includes('Unsupported input type')) {
+              console.error('EMERGENCY STOP: Unsupported input type error detected');
+              console.error('This indicates the detector is receiving the wrong input type');
+              this.stopDetection();
+              this.ui.updateStatus('Critical detection error - please refresh page', 'error');
+              return;
+            }
+            
+            // If other validation errors, re-validate the video element
+            if ( 
                 detectionError.message.includes('object')) {
               console.warn('Video element validation failed during detection, re-checking...');
               

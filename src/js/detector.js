@@ -216,8 +216,35 @@ export class Detector {
         throw new Error(`Model input validation failed: Expected HTMLCanvasElement, got ${actualType.constructor}`);
       }
       
+      // Debug logging to see what we're actually passing to the model
+      console.log('DEBUG: About to pass to model:', {
+        type: typeof canvas,
+        constructor: canvas.constructor.name,
+        isCanvas: canvas instanceof HTMLCanvasElement,
+        width: canvas.width,
+        height: canvas.height,
+        tagName: canvas.tagName
+      });
+      
+      // Try using ImageData instead of Canvas as some models prefer it
+      let modelInput = canvas;
+      try {
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        console.log('DEBUG: Created ImageData:', {
+          width: imageData.width,
+          height: imageData.height,
+          dataLength: imageData.data.length
+        });
+        // Use ImageData as model input
+        modelInput = imageData;
+      } catch (imageDataError) {
+        console.warn('Could not create ImageData, using canvas directly:', imageDataError.message);
+        modelInput = canvas;
+      }
+      
       // Run detection with proper error handling
-      const results = await this.model(canvas, {
+      const results = await this.model(modelInput, {
         threshold: 0.5,
         percentage: false // Get pixel coordinates instead of percentages
       });
